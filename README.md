@@ -44,10 +44,10 @@ cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、�
 - **免域名模式** — `cftunnel quick <端口>`，零配置生成 `*.trycloudflare.com` 临时公网地址
 - **极简操作** — `init` → `create` → `add` → `up`，4 步搞定自有域名穿透
 - **自动 DNS** — 添加路由时自动创建 CNAME 记录，删除时自动清理
-- **进程托管** — 自动下载 cloudflared，支持 macOS launchd / Linux systemd 开机自启
+- **进程托管** — 自动下载 cloudflared，支持 macOS launchd / Linux systemd / Windows Service 开机自启
 - **自动更新** — 内置版本检查和一键自更新
 - **AI 友好** — 内置 Claude Code / OpenClaw Skills，AI 助手可直接管理隧道
-- **跨平台** — 支持 macOS (Intel/Apple Silicon) + Linux (amd64/arm64)
+- **跨平台** — 支持 macOS (Intel/Apple Silicon) + Linux (amd64/arm64) + Windows (amd64/arm64)
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
@@ -55,8 +55,16 @@ cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、�
 
 ### 一键安装（推荐）
 
+**macOS / Linux：**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.sh | bash
+```
+
+**Windows（PowerShell）：**
+
+```powershell
+irm https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.ps1 | iex
 ```
 
 ### 手动下载
@@ -76,6 +84,8 @@ curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cf
 # Linux arm64
 curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_linux_arm64.tar.gz | tar xz -C /usr/local/bin/
 ```
+
+**Windows：** 从 [Releases](https://github.com/qingchencloud/cftunnel/releases) 下载 `cftunnel_windows_amd64.zip`，解压后将 `cftunnel.exe` 放到 PATH 目录中。
 
 ### 从源码构建
 

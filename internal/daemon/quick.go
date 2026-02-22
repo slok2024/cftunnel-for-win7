@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
-	"syscall"
 )
 
 // StartQuick 启动免域名模式（前台运行，Ctrl+C 退出）
@@ -39,14 +38,14 @@ func StartQuick(port string) error {
 
 	// 捕获 Ctrl+C 优雅退出
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sig, os.Interrupt)
 
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
 	select {
 	case <-sig:
-		cmd.Process.Signal(syscall.SIGINT)
+		stopChildProcess(cmd)
 		<-done
 	case err := <-done:
 		if err != nil {

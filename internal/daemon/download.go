@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,13 +10,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/qingchencloud/cftunnel/internal/config"
 )
 
 // CloudflaredPath 返回 cloudflared 二进制路径
 func CloudflaredPath() string {
-	return filepath.Join(config.Dir(), "bin", "cloudflared")
+	name := "cloudflared"
+	if runtime.GOOS == "windows" {
+		name = "cloudflared.exe"
+	}
+	return filepath.Join(config.Dir(), "bin", name)
 }
 
 // EnsureCloudflared 确保 cloudflared 已安装，未安装则自动下载
@@ -49,6 +56,12 @@ func download(dest string) error {
 		return fmt.Errorf("下载失败: HTTP %d", resp.StatusCode)
 	}
 
+	// macOS 的 cloudflared 是 tgz 格式，需要解压
+	if strings.HasSuffix(url, ".tgz") {
+		return extractTgz(resp.Body, dest)
+	}
+
+	// Linux/Windows 是裸二进制，直接写入
 	f, err := os.Create(dest)
 	if err != nil {
 		return err
@@ -57,11 +70,42 @@ func download(dest string) error {
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return err
 	}
-	if err := os.Chmod(dest, 0755); err != nil {
-		return err
+	if runtime.GOOS != "windows" {
+		os.Chmod(dest, 0755)
 	}
 	fmt.Printf("cloudflared 已下载到 %s\n", dest)
 	return nil
+}
+
+func extractTgz(r io.Reader, dest string) error {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return fmt.Errorf("解压失败: %w", err)
+	}
+	defer gr.Close()
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return fmt.Errorf("tgz 中未找到 cloudflared")
+		}
+		if err != nil {
+			return fmt.Errorf("解压失败: %w", err)
+		}
+		if filepath.Base(hdr.Name) == "cloudflared" {
+			f, err := os.Create(dest)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+			os.Chmod(dest, 0755)
+			fmt.Printf("cloudflared 已下载到 %s\n", dest)
+			return nil
+		}
+	}
 }
 
 func downloadURL() (string, error) {
@@ -75,6 +119,10 @@ func downloadURL() (string, error) {
 		return base + "cloudflared-linux-amd64", nil
 	case "linux/arm64":
 		return base + "cloudflared-linux-arm64", nil
+	case "windows/amd64":
+		return base + "cloudflared-windows-amd64.exe", nil
+	case "windows/arm64":
+		return base + "cloudflared-windows-amd64.exe", nil
 	default:
 		return "", fmt.Errorf("不支持的平台: %s/%s", runtime.GOOS, runtime.GOARCH)
 	}

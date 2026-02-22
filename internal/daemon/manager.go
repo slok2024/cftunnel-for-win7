@@ -41,11 +41,7 @@ func Stop() error {
 	if err != nil {
 		return fmt.Errorf("未找到运行中的 cloudflared")
 	}
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return err
-	}
-	if err := proc.Signal(os.Interrupt); err != nil {
+	if err := processKill(pid); err != nil {
 		return fmt.Errorf("停止 cloudflared 失败: %w", err)
 	}
 	os.Remove(pidFile)
@@ -59,8 +55,7 @@ func Running() bool {
 	if err != nil {
 		return false
 	}
-	// 用 kill -0 检测进程是否存在
-	return exec.Command("kill", "-0", strconv.Itoa(pid)).Run() == nil
+	return processRunning(pid)
 }
 
 // PID 返回当前运行的 PID

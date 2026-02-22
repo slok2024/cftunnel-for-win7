@@ -2,6 +2,7 @@ package selfupdate
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -36,8 +37,12 @@ func LatestVersion() (string, error) {
 
 // Update 下载最新版本替换自身
 func Update(version string) error {
-	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/cftunnel_%s_%s.tar.gz",
-		repo, version, runtime.GOOS, runtime.GOARCH)
+	ext := "tar.gz"
+	if runtime.GOOS == "windows" {
+		ext = "zip"
+	}
+	url := fmt.Sprintf("https://github.com/%s/releases/download/%s/cftunnel_%s_%s.%s",
+		repo, version, runtime.GOOS, runtime.GOARCH, ext)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -48,45 +53,88 @@ func Update(version string) error {
 		return fmt.Errorf("下载失败: HTTP %d", resp.StatusCode)
 	}
 
-	// 解压 tar.gz 提取 cftunnel 二进制
-	gr, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		return fmt.Errorf("解压失败: %w", err)
-	}
-	defer gr.Close()
-
-	tr := tar.NewReader(gr)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			return fmt.Errorf("tar.gz 中未找到 cftunnel 二进制")
-		}
-		if err != nil {
-			return fmt.Errorf("解压失败: %w", err)
-		}
-		if hdr.Name == "cftunnel" {
-			break
-		}
-	}
-
 	exe, err := os.Executable()
 	if err != nil {
 		return err
 	}
+
+	var binData io.Reader
+	if runtime.GOOS == "windows" {
+		binData, err = extractZip(resp.Body)
+	} else {
+		binData, err = extractTarGz(resp.Body)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Windows 不允许覆盖运行中的 exe，先 rename 旧文件
 	tmp := exe + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(f, tr); err != nil {
+	if _, err := io.Copy(f, binData); err != nil {
 		f.Close()
 		os.Remove(tmp)
 		return err
 	}
 	f.Close()
-	if err := os.Chmod(tmp, 0755); err != nil {
-		os.Remove(tmp)
-		return err
+	if runtime.GOOS != "windows" {
+		os.Chmod(tmp, 0755)
+	}
+	if runtime.GOOS == "windows" {
+		old := exe + ".old"
+		os.Remove(old)
+		os.Rename(exe, old)
 	}
 	return os.Rename(tmp, exe)
+}
+
+func extractTarGz(r io.Reader) (io.Reader, error) {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("解压失败: %w", err)
+	}
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return nil, fmt.Errorf("tar.gz 中未找到 cftunnel")
+		}
+		if err != nil {
+			return nil, fmt.Errorf("解压失败: %w", err)
+		}
+		if hdr.Name == "cftunnel" {
+			return tr, nil
+		}
+	}
+}
+
+func extractZip(r io.Reader) (io.Reader, error) {
+	// zip 需要 ReaderAt，先写到临时文件
+	tmp, err := os.CreateTemp("", "cftunnel-update-*.zip")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tmp.Name())
+	defer tmp.Close()
+	if _, err := io.Copy(tmp, r); err != nil {
+		return nil, err
+	}
+	info, _ := tmp.Stat()
+	zr, err := zip.NewReader(tmp, info.Size())
+	if err != nil {
+		return nil, fmt.Errorf("解压 zip 失败: %w", err)
+	}
+	for _, f := range zr.File {
+		if f.Name == "cftunnel.exe" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			return rc, nil
+		}
+	}
+	return nil, fmt.Errorf("zip 中未找到 cftunnel.exe")
 }
