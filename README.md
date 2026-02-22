@@ -8,7 +8,7 @@
 
 [为什么选 cftunnel？](#why) · [安装](#install) · [快速上手](#quickstart) · [命令参考](#commands) · [AI 助手集成](#ai) · [交流](#contact)
 
-关联项目：[cftunnel-app 桌面客户端](https://github.com/qingchencloud/cftunnel-app) · [ClawApp](https://github.com/qingchencloud/clawapp) · [OpenClaw 中文翻译](https://github.com/1186258278/OpenClawChineseTranslation)
+关联项目：[cftunnel-app 桌面客户端](https://github.com/qingchencloud/cftunnel-app)（[下载](https://github.com/qingchencloud/cftunnel-app/releases)） · [ClawApp](https://github.com/qingchencloud/clawapp) · [OpenClaw 中文翻译](https://github.com/1186258278/OpenClawChineseTranslation)
 
 > 用 AI 写了个前端页面想给客户看？本地跑着 API 想让远程同事调试？开发环境需要接收 Webhook？
 >
@@ -36,6 +36,7 @@ cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、�
 | 开机自启 | 手动写 systemd/launchd | `cftunnel install` |
 | 清理资源 | 手动删隧道 + 删 DNS + 删配置 | `cftunnel destroy` 一键清理 |
 | AI 集成 | 无 | 内置 Skills，AI 助手直接管理 |
+| GUI 管理 | 无 | [桌面客户端](https://github.com/qingchencloud/cftunnel-app)，可视化操作 |
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
@@ -48,6 +49,7 @@ cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、�
 - **自动更新** — 内置版本检查和一键自更新
 - **AI 友好** — 内置 Claude Code / OpenClaw Skills，AI 助手可直接管理隧道
 - **跨平台** — 支持 macOS (Intel/Apple Silicon) + Linux (amd64/arm64) + Windows (amd64/arm64)
+- **桌面客户端** — 不想敲命令？[cftunnel-app](https://github.com/qingchencloud/cftunnel-app) 提供可视化 GUI，仪表盘一键启停
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
