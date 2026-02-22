@@ -21,8 +21,8 @@ func New(apiToken, accountID string) *Client {
 	}
 }
 
-func (c *Client) AccountID() string  { return c.accountID }
-func (c *Client) API() *cf.Client    { return c.api }
+func (c *Client) AccountID() string { return c.accountID }
+func (c *Client) API() *cf.Client   { return c.api }
 
 // ListZones 列出账户下所有域名
 func (c *Client) ListZones(ctx context.Context) ([]zones.Zone, error) {
