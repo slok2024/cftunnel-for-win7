@@ -104,6 +104,12 @@ nav .links a:hover{color:var(--text);text-decoration:none}
 footer{border-top:1px solid var(--border);padding:40px 0;text-align:center;color:var(--text2);font-size:13px}
 footer .links{display:flex;gap:24px;justify-content:center;margin-bottom:16px}
 
+/* 视频展示 */
+.video-showcase{background:var(--surface);padding:60px 0}
+.video-wrap{max-width:720px;margin:0 auto;border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.video-wrap video{display:block;width:100%}
+.video-label{text-align:center;margin-top:16px;font-size:13px;color:var(--text2)}
+
 /* 响应式 */
 @media(max-width:768px){
   nav .links{display:none}
@@ -120,6 +126,7 @@ footer .links{display:flex;gap:24px;justify-content:center;margin-bottom:16px}
 <div class="container">
   <a href="#" class="logo">cf<span>tunnel</span></a>
   <div class="links">
+    <a href="#demo-video">演示</a>
     <a href="#features">特性</a>
     <a href="#compare">对比</a>
     <a href="#install">安装</a>
@@ -160,6 +167,21 @@ footer .links{display:flex;gap:24px;justify-content:center;margin-bottom:16px}
     <a href="#install" class="btn btn-outline">安装</a>
     <a href="https://linux.do/t/1636467" class="btn btn-outline" target="_blank">社区讨论</a>
   </div>
+</div>
+</section>
+
+<section id="demo-video" class="video-showcase">
+<div class="container">
+  <div class="section-title">
+    <h2>30 秒了解 cftunnel</h2>
+    <p>从安装到穿透，一条命令的事</p>
+  </div>
+  <div class="video-wrap">
+    <video controls preload="metadata" poster="images/terminal-demo.gif">
+      <source src="videos/promo.mp4" type="video/mp4">
+    </video>
+  </div>
+  <p class="video-label">cftunnel v0.4 · 终端演示 + 架构解析 + 功能对比</p>
 </div>
 </section>
 
