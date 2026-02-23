@@ -92,7 +92,7 @@ var addCmd = &cobra.Command{
 		// 推送 ingress 配置到远端
 		fmt.Println("正在同步 ingress 配置...")
 		if err := pushIngress(client, ctx, cfg); err != nil {
-			fmt.Printf("警告: 推送 ingress 失败: %v\n", err)
+			return fmt.Errorf("推送 ingress 失败: %w（DNS 记录已创建，请排查后重试 add 或手动删除 DNS 记录）", err)
 		}
 
 		fmt.Printf("路由已添加: %s → %s (%s)\n", addDomain, service, name)

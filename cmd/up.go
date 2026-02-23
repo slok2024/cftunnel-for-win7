@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/qingchencloud/cftunnel/internal/cfapi"
 	"github.com/qingchencloud/cftunnel/internal/config"
 	"github.com/qingchencloud/cftunnel/internal/daemon"
 	"github.com/qingchencloud/cftunnel/internal/selfupdate"
@@ -24,6 +26,16 @@ var upCmd = &cobra.Command{
 		if cfg.Tunnel.Token == "" {
 			return fmt.Errorf("请先运行 cftunnel init && cftunnel create <名称>")
 		}
+		// 启动前同步 ingress 配置到远端，确保本地与远端一致
+		if len(cfg.Routes) > 0 {
+			client := cfapi.New(cfg.Auth.APIToken, cfg.Auth.AccountID)
+			if err := pushIngress(client, context.Background(), cfg); err != nil {
+				fmt.Printf("警告: 同步 ingress 失败: %v（将使用远端现有配置）\n", err)
+			} else {
+				fmt.Println("ingress 配置已同步")
+			}
+		}
+
 		// 自动检查更新（非阻塞，仅提示）
 		if cfg.SelfUpdate.AutoCheck {
 			if latest, err := selfupdate.LatestVersion(); err == nil {
