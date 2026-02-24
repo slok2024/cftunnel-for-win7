@@ -47,6 +47,7 @@ cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、�
 | 多路由管理 | 手动编辑 YAML 配置 | `cftunnel add/remove/list` |
 | 开机自启 | 手动写 systemd/launchd | `cftunnel install` |
 | 清理资源 | 手动删隧道 + 删 DNS + 删配置 | `cftunnel destroy` 一键清理 |
+| 密码保护 | 需配合 Cloudflare Access | `--auth user:pass` 内置鉴权 |
 | AI 集成 | 无 | 内置 Skills，AI 助手直接管理 |
 | GUI 管理 | 无 | [桌面客户端](https://github.com/qingchencloud/cftunnel-app)，可视化操作 |
 
@@ -72,6 +73,7 @@ cftunnel 的工作流程：
 <h2 id="features">特性</h2>
 
 - **免域名模式** — `cftunnel quick <端口>`，零配置生成 `*.trycloudflare.com` 临时公网地址
+- **访问保护** — `--auth user:pass` 一键启用密码保护，内置鉴权代理中间件，支持 WebSocket 透传
 - **极简操作** — `init` → `create` → `add` → `up`，4 步搞定自有域名穿透
 - **自动 DNS** — 添加路由时自动创建 CNAME 记录，删除时自动清理
 - **进程托管** — 自动下载 cloudflared，支持 macOS launchd / Linux systemd / Windows Service 开机自启
@@ -139,6 +141,14 @@ cftunnel quick 3000
 # ✔ 隧道已启动: https://xxx-yyy-zzz.trycloudflare.com
 ```
 
+需要密码保护？加上 `--auth`：
+
+```bash
+cftunnel quick 3000 --auth admin:secret123
+# 鉴权代理已启动 127.0.0.1:3001 → 127.0.0.1:3000
+# ✔ 隧道已启动: https://xxx-yyy-zzz.trycloudflare.com（需登录）
+```
+
 > 适合临时分享和调试，Ctrl+C 退出后域名自动失效。需要固定域名请用方式二。
 
 ### 方式二：自有域名模式
@@ -197,6 +207,9 @@ cftunnel create my-tunnel
 ```bash
 # 将 app.example.com 指向本地 3000 端口
 cftunnel add myapp 3000 --domain app.example.com
+
+# 带密码保护
+cftunnel add myapp 3000 --domain app.example.com --auth admin:secret123
 ```
 
 #### 5. 启动隧道
@@ -216,6 +229,7 @@ cftunnel up
 | 命令 | 说明 |
 |------|------|
 | `cftunnel quick <端口>` | 零配置启动，生成 `*.trycloudflare.com` 临时域名 |
+| `cftunnel quick <端口> --auth user:pass` | 免域名模式 + 密码保护 |
 
 ### 配置管理
 
@@ -224,6 +238,7 @@ cftunnel up
 | `cftunnel init` | 配置认证信息（支持 `--token`/`--account`） |
 | `cftunnel create <名称>` | 创建隧道 |
 | `cftunnel add <名称> <端口> --domain <域名>` | 添加路由（自动创建 CNAME） |
+| `cftunnel add <名称> <端口> --domain <域名> --auth user:pass` | 添加路由 + 密码保护 |
 | `cftunnel remove <名称>` | 删除路由（自动清理 DNS） |
 | `cftunnel list` | 列出所有路由 |
 
@@ -288,6 +303,18 @@ cftunnel add admin 8888 --domain admin.example.com
 cftunnel list
 ```
 
+### 场景 4: 密码保护敏感服务
+
+```bash
+# 免域名模式 + 密码保护
+cftunnel quick 8080 --auth admin:mypassword
+
+# 自有域名模式 + 密码保护
+cftunnel add dashboard 3000 --domain dash.example.com --auth admin:secret123
+cftunnel up
+# 浏览器打开 dash.example.com → 登录页 → 输入账密 → 进入服务
+```
+
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
 <h2 id="config">配置文件</h2>
@@ -309,6 +336,10 @@ routes:
     service: http://localhost:3000
     zone_id: "auto-detected"
     dns_record_id: "auto-created"
+    auth:                          # 可选，启用密码保护
+      username: admin
+      password: secret123
+      signing_key: "auto-generated"
 ```
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
@@ -386,6 +417,8 @@ cftunnel create <隧道名称>
 
 # 第 3 步: 添加路由（自动创建 DNS CNAME 记录）
 cftunnel add <路由名称> <本地端口> --domain <完整域名>
+# 带密码保护：
+cftunnel add <路由名称> <本地端口> --domain <完整域名> --auth user:pass
 
 # 第 4 步: 启动
 cftunnel up
@@ -393,6 +426,7 @@ cftunnel up
 ## 其他命令
 
 - cftunnel quick <端口>   # 免域名模式（零配置）
+- cftunnel quick <端口> --auth user:pass  # 免域名 + 密码保护
 - cftunnel down          # 停止隧道
 - cftunnel status        # 查看状态
 - cftunnel list          # 列出所有路由
