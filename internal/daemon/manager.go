@@ -4,16 +4,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath" // 新增引用
 	"strconv"
 	"strings"
 
 	"github.com/qingchencloud/cftunnel/internal/config"
 )
 
-var pidFile = config.Dir() + "/cloudflared.pid"
+// 修改：pidFile 现在也放在程序同级目录
+func getPidFile() string {
+	return filepath.Join(config.Dir(), "cloudflared.pid")
+}
 
 // Start 启动 cloudflared（token 模式）
 func Start(token string) error {
+	// 这里会调用 EnsureCloudflared，请记得在 download.go 里把该函数改掉
 	binPath, err := EnsureCloudflared()
 	if err != nil {
 		return err
@@ -29,8 +34,8 @@ func Start(token string) error {
 		return fmt.Errorf("启动 cloudflared 失败: %w", err)
 	}
 
-	os.MkdirAll(config.Dir(), 0700)
-	os.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
+	// 移除 os.MkdirAll(config.Dir(), 0700)，因为当前目录肯定存在
+	os.WriteFile(getPidFile(), []byte(strconv.Itoa(cmd.Process.Pid)), 0644)
 	fmt.Printf("cloudflared 已启动 (PID: %d)\n", cmd.Process.Pid)
 	return nil
 }
@@ -44,7 +49,7 @@ func Stop() error {
 	if err := processKill(pid); err != nil {
 		return fmt.Errorf("停止 cloudflared 失败: %w", err)
 	}
-	os.Remove(pidFile)
+	os.Remove(getPidFile())
 	fmt.Println("cloudflared 已停止")
 	return nil
 }
@@ -65,7 +70,7 @@ func PID() int {
 }
 
 func readPID() (int, error) {
-	data, err := os.ReadFile(pidFile)
+	data, err := os.ReadFile(getPidFile())
 	if err != nil {
 		return 0, err
 	}
