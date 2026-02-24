@@ -1,129 +1,38 @@
 package daemon
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/qingchencloud/cftunnel/internal/config"
 )
 
-// CloudflaredPath 返回 cloudflared 二进制路径
+// CloudflaredPath 修改：取消 bin 目录，直接返回程序同级目录下的路径
 func CloudflaredPath() string {
 	name := "cloudflared"
 	if runtime.GOOS == "windows" {
 		name = "cloudflared.exe"
 	}
-	return filepath.Join(config.Dir(), "bin", name)
+	// config.Dir() 在我们之前的修改中已经指向了程序所在目录
+	return filepath.Join(config.Dir(), name)
 }
 
-// EnsureCloudflared 确保 cloudflared 已安装，未安装则自动下载
+// EnsureCloudflared 修改：彻底禁用自动下载，只做本地存在性检查
 func EnsureCloudflared() (string, error) {
 	path := CloudflaredPath()
+	
+	// 1. 检查同级目录下是否存在
 	if _, err := os.Stat(path); err == nil {
 		return path, nil
 	}
-	// 尝试系统 PATH
-	if p, err := exec.LookPath("cloudflared"); err == nil {
-		return p, nil
-	}
-	return path, download(path)
+
+	// 2. 报错并提示用户，不再调用 download(path)
+	return "", fmt.Errorf("错误: 未在同级目录找到 %s\n请手动将该文件放入目录: %s", filepath.Base(path), config.Dir())
 }
 
-func download(dest string) error {
-	url, err := downloadURL()
-	if err != nil {
-		return err
-	}
-	fmt.Printf("正在下载 cloudflared...\n")
-
-	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-		return err
-	}
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("下载失败: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("下载失败: HTTP %d", resp.StatusCode)
-	}
-
-	// macOS 的 cloudflared 是 tgz 格式，需要解压
-	if strings.HasSuffix(url, ".tgz") {
-		return extractTgz(resp.Body, dest)
-	}
-
-	// Linux/Windows 是裸二进制，直接写入
-	f, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		return err
-	}
-	if runtime.GOOS != "windows" {
-		os.Chmod(dest, 0755)
-	}
-	fmt.Printf("cloudflared 已下载到 %s\n", dest)
-	return nil
-}
-
-func extractTgz(r io.Reader, dest string) error {
-	gr, err := gzip.NewReader(r)
-	if err != nil {
-		return fmt.Errorf("解压失败: %w", err)
-	}
-	defer gr.Close()
-	tr := tar.NewReader(gr)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			return fmt.Errorf("tgz 中未找到 cloudflared")
-		}
-		if err != nil {
-			return fmt.Errorf("解压失败: %w", err)
-		}
-		if filepath.Base(hdr.Name) == "cloudflared" {
-			f, err := os.Create(dest)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			if _, err := io.Copy(f, tr); err != nil {
-				return err
-			}
-			os.Chmod(dest, 0755)
-			fmt.Printf("cloudflared 已下载到 %s\n", dest)
-			return nil
-		}
-	}
-}
-
-func downloadURL() (string, error) {
-	const base = "https://github.com/cloudflare/cloudflared/releases/latest/download/"
-	switch runtime.GOOS + "/" + runtime.GOARCH {
-	case "darwin/arm64":
-		return base + "cloudflared-darwin-arm64.tgz", nil
-	case "darwin/amd64":
-		return base + "cloudflared-darwin-amd64.tgz", nil
-	case "linux/amd64":
-		return base + "cloudflared-linux-amd64", nil
-	case "linux/arm64":
-		return base + "cloudflared-linux-arm64", nil
-	case "windows/amd64":
-		return base + "cloudflared-windows-amd64.exe", nil
-	case "windows/arm64":
-		return base + "cloudflared-windows-amd64.exe", nil
-	default:
-		return "", fmt.Errorf("不支持的平台: %s/%s", runtime.GOOS, runtime.GOARCH)
-	}
-}
+// 彻底删除或注释掉以下不再使用的函数以保持精简
+// func download(dest string) error { ... }
+// func extractTgz(r io.Reader, dest string) error { ... }
+// func downloadURL() (string, error) { ... }
