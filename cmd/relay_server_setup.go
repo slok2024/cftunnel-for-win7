@@ -17,6 +17,7 @@ var (
 	setupUser     string
 	setupKeyPath  string
 	setupPassword bool
+	setupPassVal  string
 	setupFrpsPort int
 )
 
@@ -26,6 +27,7 @@ func init() {
 	relayServerSetupCmd.Flags().StringVar(&setupUser, "user", "root", "SSH 用户名")
 	relayServerSetupCmd.Flags().StringVar(&setupKeyPath, "key", "", "SSH 私钥路径")
 	relayServerSetupCmd.Flags().BoolVar(&setupPassword, "password", false, "使用密码认证（交互输入）")
+	relayServerSetupCmd.Flags().StringVar(&setupPassVal, "pass", "", "SSH 密码（非交互模式，供 GUI 调用）")
 	relayServerSetupCmd.Flags().IntVar(&setupFrpsPort, "frps-port", 7000, "frps 监听端口")
 	relayServerCmd.AddCommand(relayServerSetupCmd)
 }
@@ -157,8 +159,11 @@ func collectSSHConfig() (*sshutil.ConnectConfig, error) {
 		}
 	}
 
-	// 密码交互输入
-	if setupPassword {
+	// 非交互密码（--pass 直接传值，供 GUI 调用）
+	if setupPassVal != "" {
+		password = setupPassVal
+	} else if setupPassword {
+		// 交互式密码输入
 		err := huh.NewForm(huh.NewGroup(
 			huh.NewInput().Title("SSH 密码").Value(&password).
 				EchoMode(huh.EchoModePassword),
