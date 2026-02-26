@@ -270,6 +270,7 @@ docker compose up -d
 | `cftunnel relay list` | 列出所有规则 |
 | `cftunnel relay up / down` | 启停 frpc |
 | `cftunnel relay status` | 查看连接状态 |
+| `cftunnel relay check [规则名]` | 检测链路连通性和延迟 |
 | `cftunnel relay logs [-f]` | 查看日志 |
 | `cftunnel relay install / uninstall` | 注册/卸载系统服务 |
 | `cftunnel relay server install` | 安装 frps 服务端（仅 Linux） |
@@ -354,10 +355,11 @@ relay:
 **现象：** `relay up` 后 `relay status` 显示未连接
 
 **排查步骤：**
-1. 确认服务器 frps 在运行：`ssh 服务器 "systemctl status frps"`
-2. 确认防火墙放行 7000 端口
-3. 确认 token 一致：`cftunnel relay status` 查看服务器地址和 token
-4. 查看日志：`cftunnel relay logs -f`
+1. 一键检测链路：`cftunnel relay check`（检测服务器、本地服务、远程端口连通性）
+2. 确认服务器 frps 在运行：`ssh 服务器 "systemctl status frps"`
+3. 确认防火墙放行 7000 端口
+4. 确认 token 一致：`cftunnel relay status` 查看服务器地址和 token
+5. 查看日志：`cftunnel relay logs -f`
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
