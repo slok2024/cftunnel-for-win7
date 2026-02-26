@@ -4,9 +4,9 @@
 [![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen?style=flat&logo=go)](https://goreportcard.com/report/github.com/qingchencloud/cftunnel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Cloudflare Tunnel 一键管理 CLI** — 让本地项目秒变公网可访问。
+**全协议内网穿透工具** — Cloud 模式免费穿透 HTTP/WS + Relay 模式自建中继 TCP/UDP 全协议。
 
-[为什么选 cftunnel？](#why) · [架构原理](#architecture) · [安装](#install) · [快速上手](#quickstart) · [命令参考](#commands) · [故障排查](#troubleshooting) · [AI 助手集成](#ai) · [交流](#contact)
+[双模式对比](#compare) · [安装](#install) · [快速上手](#quickstart) · [中继服务端部署](#relay-server) · [命令参考](#commands) · [故障排查](#troubleshooting) · [AI 助手集成](#ai) · [交流](#contact)
 
 关联项目：[cftunnel-app 桌面客户端](https://github.com/qingchencloud/cftunnel-app)（[下载](https://github.com/qingchencloud/cftunnel-app/releases)） · [ClawApp](https://github.com/qingchencloud/clawapp) · [OpenClaw 中文翻译](https://github.com/1186258278/OpenClawChineseTranslation)
 
@@ -14,73 +14,92 @@
   <video src="docs/videos/promo.mp4" width="720" controls></video>
 </p>
 
-> 在本地写了个前端页面想给客户看？本地跑着 API 想让远程同事调试？开发环境需要接收 Webhook？
+> 本地跑着服务想让外面访问？游戏服务器需要公网端口？SSH 远程连接没有公网 IP？
 >
-> 一条命令，你的 `localhost` 就有了公网域名。
+> cftunnel 提供两种穿透模式，一个工具覆盖所有场景。
 
-**免域名模式**（零配置，临时分享）：
+**Cloud 模式**（基于 Cloudflare，免费 HTTP/WS 穿透）：
 
 ```bash
 cftunnel quick 3000
 # ✔ 隧道已启动: https://xxx-yyy-zzz.trycloudflare.com
 ```
 
+**Relay 模式**（自建中继，TCP/UDP 全协议穿透）：
+
+```bash
+cftunnel quick 25565 --relay
+# ✔ 中继穿透: tcp://localhost:25565 → 远程端口 25565
+```
+
 <p align="center">
-  <img src="docs/images/terminal-demo.gif" alt="cftunnel quick 演示" width="720">
+  <img src="docs/images/terminal-demo.gif" alt="cftunnel 演示" width="720">
 </p>
 
-**自有域名模式**（稳定持久）：4 条命令搞定 `init` → `create` → `add` → `up`
-
-cftunnel 把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI，**免费、安全、无需公网 IP**。
-
-<h2 id="why">为什么选 cftunnel？</h2>
+<h2 id="compare">双模式对比</h2>
 
 <p align="center">
   <img src="docs/images/compare-chart.gif" alt="功能对比" width="720">
 </p>
 
-| 对比项 | 原生 cloudflared | cftunnel |
-|--------|-----------------|----------|
-| 免域名穿透 | `cloudflared tunnel --url` 手动操作 | `cftunnel quick <端口>` 一条命令 |
-| 创建隧道 | 登录浏览器 + 手动配置 | `cftunnel create my-tunnel` |
-| DNS 记录 | 手动去 Dashboard 创建 CNAME | `cftunnel add` 自动创建 |
-| 多路由管理 | 手动编辑 YAML 配置 | `cftunnel add/remove/list` |
-| 开机自启 | 手动写 systemd/launchd | `cftunnel install` |
-| 清理资源 | 手动删隧道 + 删 DNS + 删配置 | `cftunnel destroy` 一键清理 |
-| 密码保护 | 需配合 Cloudflare Access | `--auth user:pass` 内置鉴权 |
-| AI 集成 | 无 | 内置 Skills，AI 助手直接管理 |
-| GUI 管理 | 无 | [桌面客户端](https://github.com/qingchencloud/cftunnel-app)，可视化操作 |
+| 对比项 | Cloud 模式 | Relay 模式 |
+|--------|-----------|-----------|
+| 引擎 | cloudflared (Cloudflare Tunnel) | frpc/frps (frp) |
+| 协议 | HTTP / HTTPS / WebSocket | TCP / UDP / HTTP / 全协议 |
+| 需要 | Cloudflare 账户（免费） | 自备公网服务器 |
+| 域名 | 自动分配 `*.trycloudflare.com` 或自有域名 | 通过 IP + 端口访问 |
+| 加密 | Cloudflare 全程加密 + 全球 CDN | 自行配置（frp 内置 token 鉴权） |
+| 费用 | 免费 | 服务器费用（最低 $3/月） |
+| 典型场景 | Web / API / Webhook / 前端预览 | 游戏服务器 / 数据库 / SSH / 远程桌面 |
+| 快速启动 | `cftunnel quick 3000` | `cftunnel quick 25565 --relay` |
+| 系统服务 | `cftunnel install` | `cftunnel relay install` |
 
-<p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
-
-<h2 id="architecture">架构原理</h2>
-
-<p align="center">
-  <img src="docs/images/architecture.gif" alt="cftunnel 架构原理" width="720">
-</p>
-
-cftunnel 的工作流程：
-
-1. **cftunnel CLI** 作为管理器，负责配置管理和进程编排
-2. 自动下载并启动 **cloudflared** 守护进程
-3. cloudflared 与 **Cloudflare Edge** 建立加密隧道
-4. 互联网用户通过 Cloudflare 全球边缘节点访问你的本地服务
-
-整个过程无需公网 IP，流量经过 Cloudflare 全球 CDN 加速，自带 HTTPS。
+两种模式独立共存，互不干扰，可以同时使用。
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
 <h2 id="features">特性</h2>
 
+**Cloud 模式（Cloudflare Tunnel）：**
 - **免域名模式** — `cftunnel quick <端口>`，零配置生成 `*.trycloudflare.com` 临时公网地址
-- **访问保护** — `--auth user:pass` 一键启用密码保护，内置鉴权代理中间件，支持 WebSocket 透传
+- **访问保护** — `--auth user:pass` 一键启用密码保护，内置鉴权代理中间件
 - **极简操作** — `init` → `create` → `add` → `up`，4 步搞定自有域名穿透
 - **自动 DNS** — 添加路由时自动创建 CNAME 记录，删除时自动清理
-- **进程托管** — 自动下载 cloudflared，支持 macOS launchd / Linux systemd / Windows Service 开机自启
+
+**Relay 模式（自建中继）：**
+- **全协议穿透** — TCP / UDP / HTTP，游戏服务器、数据库、SSH、远程桌面
+- **一键部署** — 服务端 `curl | bash` 或 Docker Compose，客户端 `relay init` 即连
+- **快速穿透** — `cftunnel quick <端口> --relay`，无需预配置规则
+
+**通用：**
+- **跨平台** — macOS (Intel/Apple Silicon) + Linux (amd64/arm64) + Windows (amd64/arm64)
+- **进程托管** — 自动下载引擎二进制，支持 macOS launchd / Linux systemd / Windows Service
 - **自动更新** — 内置版本检查和一键自更新
+- **便携模式** — 程序同级目录放 `portable` 空文件，配置/日志/二进制就地存储
+- **桌面客户端** — [cftunnel-app](https://github.com/qingchencloud/cftunnel-app) 提供可视化 GUI
 - **AI 友好** — 内置 Claude Code / OpenClaw Skills，AI 助手可直接管理隧道
-- **跨平台** — 支持 macOS (Intel/Apple Silicon) + Linux (amd64/arm64) + Windows (amd64/arm64)
-- **桌面客户端** — 不想敲命令？[cftunnel-app](https://github.com/qingchencloud/cftunnel-app) 提供可视化 GUI，仪表盘一键启停
+
+<p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
+
+<h2 id="architecture">架构原理</h2>
+
+cftunnel 提供两种穿透引擎，按场景选择：
+
+**Cloud 模式** — 流量经过 Cloudflare 全球 CDN，自带 HTTPS，无需公网 IP：
+
+```
+localhost:3000 → cftunnel → cloudflared → Cloudflare Edge → 公网用户
+                 (管理层)    (隧道进程)     (全球 CDN)       (通过域名访问)
+```
+
+**Relay 模式** — 流量经过你的公网服务器，支持全协议：
+
+```
+localhost:25565 → cftunnel → frpc → 你的公网服务器(frps) → 远程访问
+                  (管理层)   (客户端)   (中继服务端)        (通过 IP:端口)
+```
+
+cftunnel 本身是管理层，负责配置管理、进程编排、二进制下载，不经手流量。
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
@@ -102,30 +121,13 @@ irm https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.ps1 | 
 
 ### 手动下载
 
-从 [Releases](https://github.com/qingchencloud/cftunnel/releases) 下载对应平台的二进制文件：
-
-```bash
-# macOS Apple Silicon
-curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_darwin_arm64.tar.gz | tar xz -C /usr/local/bin/
-
-# macOS Intel
-curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_darwin_amd64.tar.gz | tar xz -C /usr/local/bin/
-
-# Linux amd64
-curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_linux_amd64.tar.gz | tar xz -C /usr/local/bin/
-
-# Linux arm64
-curl -fsSL https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_linux_arm64.tar.gz | tar xz -C /usr/local/bin/
-```
-
-**Windows：** 从 [Releases](https://github.com/qingchencloud/cftunnel/releases) 下载 `cftunnel_windows_amd64.zip`，解压后将 `cftunnel.exe` 放到 PATH 目录中。
+从 [Releases](https://github.com/qingchencloud/cftunnel/releases) 下载对应平台的二进制文件。
 
 ### 从源码构建
 
 ```bash
 git clone https://github.com/qingchencloud/cftunnel.git
-cd cftunnel
-make build
+cd cftunnel && make build
 ```
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
@@ -145,125 +147,135 @@ cftunnel quick 3000
 
 ```bash
 cftunnel quick 3000 --auth admin:secret123
-# 鉴权代理已启动 127.0.0.1:3001 → 127.0.0.1:3000
-# ✔ 隧道已启动: https://xxx-yyy-zzz.trycloudflare.com（需登录）
 ```
 
-> 适合临时分享和调试，Ctrl+C 退出后域名自动失效。需要固定域名请用方式二。
+> 适合临时分享和调试，Ctrl+C 退出后域名自动失效。
 
-### 方式二：自有域名模式
+### 方式二：自有域名模式（Cloudflare）
 
-<p align="center">
-  <img src="docs/images/custom-domain.gif" alt="自有域名模式演示" width="720">
-</p>
+> 前提：需要 Cloudflare 账户和至少一个已添加的域名。
 
-#### 1. 准备 Cloudflare API Token
-
-> 前提：你需要一个 Cloudflare 账户和至少一个已添加的域名。
-
-**创建 API 令牌：**
-
-1. 打开 [API 令牌页面](https://dash.cloudflare.com/profile/api-tokens)
-2. 点击「创建令牌」→「创建自定义令牌」→「开始使用」
-3. 令牌名称随意填写（如 `cftunnel`）
-4. 添加 3 条权限（点「+ 添加更多」逐条添加）：
-
-```
-┌──────────────────────────────────────────────────┐
-│ 第 1 行: 帐户 │ Cloudflare Tunnel │ 编辑       │
-│ 第 2 行: 区域 │ DNS              │ 编辑       │
-│ 第 3 行: 区域 │ 区域设置          │ 读取       │
-└──────────────────────────────────────────────────┘
-```
-
-> **注意**: 第 2、3 行需先将左侧下拉框从「帐户」切换为「区域」。DNS 权限请选择「DNS」而非「DNS 设置」，两者不同。
-
-5. 区域资源 → 包括 → 特定区域 → 选择你的域名
-6. 点击「继续以显示摘要」→「创建令牌」→ **立即复制令牌**（只显示一次）
-
-**获取账户 ID（任选其一）：**
-
-- **方式 A**: [Cloudflare 首页](https://dash.cloudflare.com) → 点击域名 → 页面右下角「API」区域 → 复制「账户 ID」
-- **方式 B**: 首页 → 账户名称旁「⋯」→ 复制账户 ID
-
-#### 2. 初始化认证
+1. 创建 [API 令牌](https://dash.cloudflare.com/profile/api-tokens)（需要 3 条权限：Cloudflare Tunnel 编辑 + DNS 编辑 + 区域设置读取）
+2. 获取账户 ID（Cloudflare 首页 → 点击域名 → 右下角「API」区域）
 
 ```bash
-# 交互式（推荐）
-cftunnel init
-
-# 非交互式
 cftunnel init --token <your-token> --account <account-id>
-```
-
-#### 3. 创建隧道
-
-```bash
 cftunnel create my-tunnel
-```
-
-#### 4. 添加路由
-
-```bash
-# 将 app.example.com 指向本地 3000 端口
 cftunnel add myapp 3000 --domain app.example.com
-
-# 带密码保护
-cftunnel add myapp 3000 --domain app.example.com --auth admin:secret123
+cftunnel up
+# 搞定！app.example.com → localhost:3000
 ```
 
-#### 5. 启动隧道
+### 方式三：中继模式（全协议穿透）
+
+> 前提：需要一台公网服务器（任意云服务商的 VPS 即可）。
+
+**第 1 步：部署服务端**（见下方 [中继服务端部署](#relay-server)）
+
+**第 2 步：客户端配置**
 
 ```bash
-cftunnel up
+# 使用服务端输出的连接命令
+cftunnel relay init --server 1.2.3.4:7000 --token abc123
+
+# 添加穿透规则
+cftunnel relay add minecraft --local 25565 --remote 25565 --proto tcp
+cftunnel relay add ssh --local 22 --remote 6022 --proto tcp
+
+# 启动
+cftunnel relay up
+
+# 开机自启
+cftunnel relay install
 ```
 
-搞定！现在可以通过 `app.example.com` 访问你本地的 3000 端口服务了。
+**快速穿透（无需预配置规则）：**
+
+```bash
+cftunnel quick 25565 --relay              # TCP 穿透
+cftunnel quick 9987 --relay --proto udp   # UDP 穿透
+```
+
+<p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
+
+<h2 id="relay-server">中继服务端部署</h2>
+
+Relay 模式需要一台公网服务器运行 frps 服务端。提供三种部署方式：
+
+### 方式 A：SSH 远程安装（推荐）
+
+在本地一条命令搞定服务端安装 + 客户端配置：
+
+```bash
+cftunnel relay server setup --host 1.2.3.4 --user root --key ~/.ssh/id_ed25519
+# ✔ SSH 连接成功
+# ✔ frps 远程安装完成! 本地已自动配置
+```
+
+支持密码认证（`--password` 交互输入）和全交互模式（不传参数自动引导）。
+
+### 方式 B：一键脚本
+
+在公网服务器上执行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install-relay.sh | bash
+```
+
+脚本自动完成：下载 frps → 生成随机 token → 注册 systemd → 输出客户端连接命令。
+
+### 方式 C：Docker Compose
+
+```bash
+mkdir -p cftunnel-relay && cd cftunnel-relay
+curl -fsSLO https://raw.githubusercontent.com/qingchencloud/cftunnel/main/docker/relay-server/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/qingchencloud/cftunnel/main/docker/relay-server/frps.toml.example
+cp frps.toml.example frps.toml
+# 编辑 frps.toml，设置你的 auth.token
+docker compose up -d
+```
+
+> 记得在服务器防火墙放行 7000 端口和穿透使用的端口。
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
 <h2 id="commands">命令参考</h2>
 
-### 免域名模式
+### Cloud 模式
 
 | 命令 | 说明 |
 |------|------|
-| `cftunnel quick <端口>` | 零配置启动，生成 `*.trycloudflare.com` 临时域名 |
-| `cftunnel quick <端口> --auth user:pass` | 免域名模式 + 密码保护 |
-
-### 配置管理
-
-| 命令 | 说明 |
-|------|------|
-| `cftunnel init` | 配置认证信息（支持 `--token`/`--account`） |
-| `cftunnel create <名称>` | 创建隧道 |
+| `cftunnel quick <端口>` | 免域名穿透，生成临时域名 |
+| `cftunnel quick <端口> --auth user:pass` | 免域名 + 密码保护 |
+| `cftunnel init` | 配置 Cloudflare 认证信息 |
+| `cftunnel create <名称>` | 创建 Tunnel |
 | `cftunnel add <名称> <端口> --domain <域名>` | 添加路由（自动创建 CNAME） |
-| `cftunnel add <名称> <端口> --domain <域名> --auth user:pass` | 添加路由 + 密码保护 |
 | `cftunnel remove <名称>` | 删除路由（自动清理 DNS） |
 | `cftunnel list` | 列出所有路由 |
-
-### 运行管理
-
-| 命令 | 说明 |
-|------|------|
-| `cftunnel up` | 启动隧道（自动下载 cloudflared） |
-| `cftunnel down` | 停止隧道 |
+| `cftunnel up / down` | 启停 cloudflared |
 | `cftunnel status` | 查看隧道状态 |
-| `cftunnel logs [-f]` | 查看日志（`-f` 实时跟踪） |
+| `cftunnel logs [-f]` | 查看日志 |
+| `cftunnel install / uninstall` | 注册/卸载系统服务 |
+| `cftunnel destroy [--force]` | 删除隧道 + DNS + 配置 |
+| `cftunnel reset [--force]` | 完全重置 |
 
-### 系统服务
-
-| 命令 | 说明 |
-|------|------|
-| `cftunnel install` | 注册系统服务（macOS launchd / Linux systemd） |
-| `cftunnel uninstall` | 卸载系统服务 |
-
-### 隧道生命周期
+### Relay 模式
 
 | 命令 | 说明 |
 |------|------|
-| `cftunnel destroy [--force]` | 删除隧道 + 所有 DNS 记录 |
-| `cftunnel reset [--force]` | 完全重置（删隧道 + 清本地配置） |
+| `cftunnel relay init --server <IP:端口> --token <密钥>` | 配置中继服务器 |
+| `cftunnel relay add <名称> --local <端口> --proto tcp` | 添加 TCP 规则 |
+| `cftunnel relay add <名称> --local <端口> --proto udp` | 添加 UDP 规则 |
+| `cftunnel relay remove <名称>` | 删除规则 |
+| `cftunnel relay list` | 列出所有规则 |
+| `cftunnel relay up / down` | 启停 frpc |
+| `cftunnel relay status` | 查看连接状态 |
+| `cftunnel relay logs [-f]` | 查看日志 |
+| `cftunnel relay install / uninstall` | 注册/卸载系统服务 |
+| `cftunnel relay server install` | 安装 frps 服务端（仅 Linux） |
+| `cftunnel relay server setup` | SSH 远程安装 frps 服务端 |
+| `cftunnel quick <端口> --relay` | 通过中继快速穿透 |
+| `cftunnel quick <端口> --relay --proto udp` | UDP 快速穿透 |
 
 ### 版本管理
 
@@ -274,55 +286,14 @@ cftunnel up
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
-<h2 id="scenarios">典型使用场景</h2>
-
-### 场景 1: 暴露本地开发服务
-
-```bash
-cftunnel init
-cftunnel create dev-tunnel
-cftunnel add dev 3000 --domain dev.example.com
-cftunnel up
-# 现在 dev.example.com 指向 localhost:3000
-```
-
-### 场景 2: Webhook 接收
-
-```bash
-cftunnel add webhook 9801 --domain webhook.example.com
-cftunnel up
-cftunnel install  # 开机自启
-```
-
-### 场景 3: 多服务同时暴露
-
-```bash
-cftunnel add api 8080 --domain api.example.com
-cftunnel add web 3000 --domain web.example.com
-cftunnel add admin 8888 --domain admin.example.com
-cftunnel list
-```
-
-### 场景 4: 密码保护敏感服务
-
-```bash
-# 免域名模式 + 密码保护
-cftunnel quick 8080 --auth admin:mypassword
-
-# 自有域名模式 + 密码保护
-cftunnel add dashboard 3000 --domain dash.example.com --auth admin:secret123
-cftunnel up
-# 浏览器打开 dash.example.com → 登录页 → 输入账密 → 进入服务
-```
-
-<p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
-
 <h2 id="config">配置文件</h2>
 
 配置存储在 `~/.cftunnel/config.yml`：
 
 ```yaml
 version: 1
+
+# Cloud 模式配置
 auth:
   api_token: "your-token"
   account_id: "your-account-id"
@@ -334,12 +305,20 @@ routes:
   - name: myapp
     hostname: app.example.com
     service: http://localhost:3000
-    zone_id: "auto-detected"
-    dns_record_id: "auto-created"
-    auth:                          # 可选，启用密码保护
-      username: admin
-      password: secret123
-      signing_key: "auto-generated"
+
+# Relay 模式配置（与 Cloud 模式独立共存）
+relay:
+  server: "1.2.3.4:7000"
+  token: "your-relay-token"
+  rules:
+    - name: minecraft
+      proto: tcp
+      local_port: 25565
+      remote_port: 25565
+    - name: game-voice
+      proto: udp
+      local_port: 9987
+      remote_port: 9987
 ```
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
@@ -348,154 +327,52 @@ routes:
 
 ### QUIC 连接超时
 
-**现象：** 日志中反复出现 `failed to dial to edge with quic: timeout: no recent network activity`
+**现象：** `failed to dial to edge with quic: timeout`
 
-**原因：** cloudflared 默认使用 QUIC（UDP）协议，代理软件或防火墙拦截了 UDP 流量。
-
-**解决：** cftunnel v0.6.1+ 已默认使用 `--protocol http2`（TCP）。如果你是手动安装的系统服务，请重新安装：
-
-```bash
-cftunnel uninstall
-cftunnel install
-```
+**解决：** cftunnel v0.6.1+ 已默认使用 HTTP/2（TCP）。重装服务即可：`cftunnel uninstall && cftunnel install`
 
 ### DNS 被 fake-ip 劫持
 
-**现象：** cloudflared 连接的 IP 是 `198.18.0.x`（Clash/代理软件的虚拟 IP 段），TLS 握手失败。
+**现象：** cloudflared 连接到 `198.18.0.x`
 
-**原因：** Clash Verge 等代理软件的 TUN 模式启用了 fake-ip，劫持了 cloudflared 的 DNS 解析。
-
-**解决（任选其一）：**
-
-1. 在代理软件的 TUN 设置中，将 `cloudflared` 进程加入绕行列表（推荐）
-2. 将 `*.argotunnel.com` 加入 fake-ip-filter 排除列表
-3. 临时关闭 TUN 模式
+**解决：** 将 `cloudflared` 进程加入代理软件 TUN 绕行列表，或将 `*.argotunnel.com` 加入 fake-ip-filter。
 
 ### Cloudflare 1033 错误
 
-**现象：** 浏览器显示 `error code: 1033`
+**现象：** DNS CNAME 指向旧 Tunnel ID
 
-**原因：** 域名的 DNS CNAME 记录指向了旧的 Tunnel ID，与当前运行的隧道不匹配。
-
-**解决：** 删除路由后重新添加，cftunnel 会自动修正 DNS 记录：
-
-```bash
-cftunnel remove <路由名称>
-cftunnel add <路由名称> <端口> --domain <域名>
-```
+**解决：** `cftunnel remove <名称>` 再 `cftunnel add` 重建路由。
 
 ### Cloudflare 530 错误
 
-**现象：** 浏览器显示 HTTP 530 错误
+**现象：** cloudflared 未连接到 Edge
 
-**原因：** cloudflared 未成功连接到 Cloudflare Edge，通常是上述 QUIC 超时或 fake-ip 问题导致。
+**解决：** `cftunnel logs -f` 查看实时日志，根据具体错误参考上述方案。
 
-**解决：** 运行 `cftunnel logs -f` 查看实时日志，根据具体错误信息参考上述对应章节排查。
+### Relay 模式连接失败
+
+**现象：** `relay up` 后 `relay status` 显示未连接
+
+**排查步骤：**
+1. 确认服务器 frps 在运行：`ssh 服务器 "systemctl status frps"`
+2. 确认防火墙放行 7000 端口
+3. 确认 token 一致：`cftunnel relay status` 查看服务器地址和 token
+4. 查看日志：`cftunnel relay logs -f`
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 
 <h2 id="ai">AI 助手集成</h2>
 
-cftunnel 内置了 AI 助手 Skills，让 Claude Code、OpenClaw 等 AI 编码助手可以直接帮你管理隧道。
+cftunnel 内置 AI 助手 Skills，让 Claude Code、OpenClaw 等 AI 编码助手可以直接管理隧道。
 
 ### Claude Code
 
-将项目克隆到本地后，Claude Code 会自动加载 `.claude/skills/cftunnel.md`，你可以直接说：
+项目克隆到本地后，Claude Code 自动加载 Skills，你可以直接说：
 
 ```
 帮我用 cftunnel quick 把本地 3000 端口临时分享出去
+帮我用 cftunnel relay 把本地 25565 端口穿透出去
 ```
-
-或者：
-
-```
-帮我用 cftunnel 把本地 3000 端口暴露到 dev.example.com
-```
-
-### OpenClaw / 其他 AI 助手
-
-复制以下提示词给你的 AI 助手，即可让它帮你操作 cftunnel：
-
-<details>
-<summary>点击展开完整提示词</summary>
-
-```
-你是一个熟悉 cftunnel 的运维助手。cftunnel 是 Cloudflare Tunnel 的 CLI 管理工具，用于内网穿透。
-
-## 安装
-
-macOS / Linux:
-curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.sh | bash
-
-Windows (PowerShell):
-irm https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.ps1 | iex
-
-## 两种模式
-
-### 模式一：免域名（零配置，临时用）
-
-cftunnel quick <端口>
-# 自动生成 *.trycloudflare.com 随机域名，Ctrl+C 退出即失效
-# 无需账户、Token、域名
-
-### 模式二：自有域名（稳定持久）
-
-需要引导用户准备两个参数：
-
-1. API Token（API 令牌）:
-   - 打开 https://dash.cloudflare.com/profile/api-tokens
-   - 点击「创建令牌」→「创建自定义令牌」→「开始使用」
-   - 添加 3 条权限（点「+ 添加更多」逐条添加）:
-     帐户 | Cloudflare Tunnel | 编辑
-     区域 | DNS              | 编辑（注意: 选「DNS」不是「DNS 设置」）
-     区域 | 区域设置          | 读取
-   - 第 2、3 行需先将左侧下拉框从「帐户」切换为「区域」
-   - 区域资源 → 包括 → 特定区域 → 选择域名
-   - 创建后立即复制令牌（只显示一次）
-
-2. Account ID（账户 ID）:
-   - 方式 A: https://dash.cloudflare.com → 点击域名 → 右下角「API」区域 → 账户 ID
-   - 方式 B: 首页 → 账户名称旁「⋯」→ 复制账户 ID
-
-使用流程：
-
-# 第 1 步: 配置认证（需要上面两个参数）
-cftunnel init --token <API_TOKEN> --account <ACCOUNT_ID>
-
-# 第 2 步: 创建隧道
-cftunnel create <隧道名称>
-
-# 第 3 步: 添加路由（自动创建 DNS CNAME 记录）
-cftunnel add <路由名称> <本地端口> --domain <完整域名>
-# 带密码保护：
-cftunnel add <路由名称> <本地端口> --domain <完整域名> --auth user:pass
-
-# 第 4 步: 启动
-cftunnel up
-
-## 其他命令
-
-- cftunnel quick <端口>   # 免域名模式（零配置）
-- cftunnel quick <端口> --auth user:pass  # 免域名 + 密码保护
-- cftunnel down          # 停止隧道
-- cftunnel status        # 查看状态
-- cftunnel list          # 列出所有路由
-- cftunnel remove <名称> # 删除路由（自动清理 DNS）
-- cftunnel destroy       # 删除隧道 + 所有 DNS 记录
-- cftunnel install       # 注册系统服务（开机自启）
-- cftunnel logs -f       # 实时查看日志
-- cftunnel update        # 自动更新 cftunnel
-
-## 注意事项
-
-- 临时分享优先推荐 `cftunnel quick`，零配置最快
-- 自有域名模式需先完成 `init` 和 `create`
-- 添加路由时会自动创建 DNS CNAME 记录，删除时自动清理
-- 一个隧道可以挂载多条路由（多个域名指向不同本地端口）
-- 域名必须是用户 Cloudflare 账户中已有的域名的子域名
-```
-
-</details>
 
 <p align="right"><a href="#cftunnel">⬆ 回到顶部</a></p>
 

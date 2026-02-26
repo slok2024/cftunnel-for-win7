@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>cftunnel — Cloudflare Tunnel 一键管理 CLI | 内网穿透工具</title>
-<meta name="description" content="cftunnel 是基于 Cloudflare Tunnel 的开源 CLI 工具，一条命令让 localhost 变公网域名。免费、安全、无需公网 IP，支持 macOS / Linux / Windows。">
-<meta name="keywords" content="cftunnel, cloudflare tunnel, 内网穿透, localhost, 公网域名, CLI, 开源, frp替代, ngrok替代">
+<title>cftunnel — 全协议内网穿透工具 | Cloud + Relay 双模式</title>
+<meta name="description" content="cftunnel 是开源全协议内网穿透工具。Cloud 模式基于 Cloudflare Tunnel 免费穿透 HTTP/WS，Relay 模式自建中继支持 TCP/UDP 全协议。一个工具，覆盖所有场景。">
+<meta name="keywords" content="cftunnel, 内网穿透, cloudflare tunnel, frp, TCP穿透, UDP穿透, 中继模式, 游戏服务器穿透, SSH穿透, localhost, 公网域名, CLI, 开源, ngrok替代">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://qingchencloud.github.io/cftunnel/">
-<meta property="og:title" content="cftunnel — Cloudflare Tunnel 一键管理 CLI">
-<meta property="og:description" content="一条命令让 localhost 变公网域名。免费、安全、无需公网 IP。">
+<meta property="og:title" content="cftunnel — 全协议内网穿透工具">
+<meta property="og:description" content="Cloud 模式免费穿透 HTTP/WS + Relay 模式自建中继 TCP/UDP 全协议。一个工具搞定。">
 <meta property="og:url" content="https://qingchencloud.github.io/cftunnel/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_CN">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"cftunnel","description":"基于 Cloudflare Tunnel 的开源 CLI 内网穿透工具","url":"https://qingchencloud.github.io/cftunnel/","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"},"author":{"@type":"Organization","name":"武汉晴辰天下网络科技有限公司","url":"https://qingchencloud.com"}}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"cftunnel","description":"全协议内网穿透工具，Cloud 模式 + Relay 模式双引擎","url":"https://qingchencloud.github.io/cftunnel/","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"},"author":{"@type":"Organization","name":"武汉晴辰天下网络科技有限公司","url":"https://qingchencloud.com"}}
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -25,31 +25,24 @@
   --text:#e8e8f0;--text2:#7a7a95;--text3:#50506a;
   --accent:#3b82f6;--accent2:#60a5fa;--accent-glow:rgba(59,130,246,.15);
   --green:#22c55e;--green-glow:rgba(34,197,94,.12);
-  --orange:#f59e0b;--purple:#a855f7;
+  --orange:#f59e0b;--purple:#a855f7;--red:#ef4444;
   --glass:rgba(255,255,255,.03);--glass2:rgba(255,255,255,.05);
 }
 html{scroll-behavior:smooth}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
 a{color:var(--accent2);text-decoration:none;transition:color .2s}
-a:hover{color:#93c5fd;text-decoration:none}
+a:hover{color:#93c5fd}
 ::selection{background:var(--accent);color:#fff}
-
-/* 布局 */
 .container{max-width:1120px;margin:0 auto;padding:0 28px}
 section{padding:100px 0;position:relative}
 
 /* 极光背景 */
 .aurora{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden}
 .aurora-blob{position:absolute;border-radius:50%;filter:blur(120px);opacity:.35;animation:aurora-drift 20s ease-in-out infinite alternate}
-.aurora-blob:nth-child(1){width:600px;height:600px;background:radial-gradient(circle,rgba(59,130,246,.3),transparent 70%);top:-200px;left:-100px;animation-delay:0s}
+.aurora-blob:nth-child(1){width:600px;height:600px;background:radial-gradient(circle,rgba(59,130,246,.3),transparent 70%);top:-200px;left:-100px}
 .aurora-blob:nth-child(2){width:500px;height:500px;background:radial-gradient(circle,rgba(34,197,94,.2),transparent 70%);top:-150px;right:-100px;animation-delay:-7s}
 .aurora-blob:nth-child(3){width:400px;height:400px;background:radial-gradient(circle,rgba(168,85,247,.15),transparent 70%);bottom:20%;left:30%;animation-delay:-14s}
-@keyframes aurora-drift{
-  0%{transform:translate(0,0) scale(1)}
-  33%{transform:translate(60px,40px) scale(1.1)}
-  66%{transform:translate(-40px,80px) scale(.95)}
-  100%{transform:translate(30px,-30px) scale(1.05)}
-}
+@keyframes aurora-drift{0%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,40px) scale(1.1)}66%{transform:translate(-40px,80px) scale(.95)}100%{transform:translate(30px,-30px) scale(1.05)}}
 
 /* 导航 */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(6,6,11,.8);backdrop-filter:blur(20px) saturate(1.2);border-bottom:1px solid var(--border);transition:all .3s}
@@ -62,9 +55,9 @@ nav .nav-links a{color:var(--text2);font-weight:500;position:relative;padding:4p
 nav .nav-links a:hover{color:var(--text)}
 nav .nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--accent);border-radius:1px;transition:width .3s}
 nav .nav-links a:hover::after{width:100%}
-.gh-star{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:var(--glass2);border:1px solid var(--border2);border-radius:8px;font-size:13px;font-weight:600;color:var(--text)!important;transition:all .3s}
-.gh-star:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-1px)}
-.gh-star svg{opacity:.8}
+.gh-star{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;color:var(--text)!important;transition:all .3s;white-space:nowrap}
+.gh-star:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-1px);box-shadow:0 4px 16px rgba(59,130,246,.2)}
+.gh-star svg{flex-shrink:0}
 
 /* Hero */
 .hero{padding:160px 0 100px;text-align:center;position:relative;z-index:1}
@@ -74,30 +67,43 @@ nav .nav-links a:hover::after{width:100%}
 .hero h1{font-size:clamp(36px,6vw,64px);font-weight:800;letter-spacing:-2px;line-height:1.1;margin-bottom:20px;animation:fade-up .8s ease-out .1s both}
 .hero h1 .gradient{background:linear-gradient(135deg,var(--accent2) 0%,var(--green) 50%,var(--accent2) 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradient-shift 4s ease-in-out infinite}
 @keyframes gradient-shift{0%{background-position:0% center}50%{background-position:100% center}100%{background-position:0% center}}
-.hero .subtitle{font-size:clamp(16px,2.5vw,20px);color:var(--text2);max-width:560px;margin:0 auto 44px;line-height:1.7;animation:fade-up .8s ease-out .2s both}
+.hero .subtitle{font-size:clamp(16px,2.5vw,20px);color:var(--text2);max-width:620px;margin:0 auto 44px;line-height:1.7;animation:fade-up .8s ease-out .2s both}
 @keyframes fade-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
-/* 终端动画 */
-.terminal{max-width:620px;margin:0 auto 48px;background:var(--surface);border:1px solid var(--border2);border-radius:14px;overflow:hidden;text-align:left;box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.03) inset;animation:fade-up .8s ease-out .3s both;position:relative}
-.terminal::before{content:'';position:absolute;inset:0;border-radius:14px;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 50%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-.terminal-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
-.terminal-dot{width:12px;height:12px;border-radius:50%}
-.terminal-dot.r{background:#ff5f57}.terminal-dot.y{background:#febc2e}.terminal-dot.g{background:#28c840}
-.terminal-body{padding:22px;font-family:"SF Mono",Monaco,"Cascadia Code",Consolas,monospace;font-size:14px;line-height:2}
-.terminal-body .prompt{color:var(--green)}.terminal-body .cmd{color:var(--text)}.terminal-body .out{color:var(--text2)}.terminal-body .url{color:var(--accent2)}
-.typing-cursor{display:inline-block;width:8px;height:18px;background:var(--accent2);margin-left:2px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
-@keyframes blink{50%{opacity:0}}
+/* 终端 */
+.terminal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;overflow:hidden;max-width:640px;margin:0 auto;animation:fade-up .8s ease-out .3s both;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.terminal-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.terminal-dot{width:10px;height:10px;border-radius:50%}
+.terminal-dot:nth-child(1){background:#ef4444}
+.terminal-dot:nth-child(2){background:#f59e0b}
+.terminal-dot:nth-child(3){background:#22c55e}
+.terminal-bar .term-title{margin-left:auto;font-size:12px;color:var(--text3)}
+.terminal-body{padding:20px;font-family:"SF Mono",Monaco,"Cascadia Code",Consolas,monospace;font-size:14px;line-height:1.8;min-height:90px}
+.terminal-body .prompt{color:var(--green)}
+.terminal-body .cmd{color:var(--text)}
+.terminal-body .output{color:var(--accent2)}
+.terminal-body .flag{color:var(--orange)}
+.typing-cursor{display:inline-block;width:8px;height:16px;background:var(--accent2);margin-left:2px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* 终端 Tab */
+.term-tabs{display:flex;gap:0;margin-bottom:0;padding:0 16px;background:var(--surface2)}
+.term-tab{padding:8px 20px;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .3s;font-family:inherit}
+.term-tab:hover{color:var(--text2)}
+.term-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.term-panel{display:none}
+.term-panel.active{display:block}
 
 /* CTA 按钮 */
-.cta-group{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fade-up .8s ease-out .4s both}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 30px;border-radius:10px;font-size:15px;font-weight:600;transition:all .3s;cursor:pointer;border:none;position:relative}
+.cta-group{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:48px;animation:fade-up .8s ease-out .4s both;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all .3s;border:none;text-decoration:none}
 .btn-primary{background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;box-shadow:0 4px 20px rgba(59,130,246,.3)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(59,130,246,.4);color:#fff}
-.btn-outline{background:var(--glass2);border:1px solid var(--border2);color:var(--text)}
-.btn-outline:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-2px);color:var(--text)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2);backdrop-filter:blur(10px)}
+.btn-outline:hover{border-color:var(--accent);background:var(--accent-glow);color:var(--text);transform:translateY(-2px)}
 
 /* 统计数字 */
-.stats{display:flex;justify-content:center;gap:48px;margin-top:60px;animation:fade-up .8s ease-out .5s both}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:600px;margin:0 auto;animation:fade-up .8s ease-out .5s both}
 .stat{text-align:center}
 .stat-num{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .stat-label{font-size:13px;color:var(--text3);margin-top:4px}
@@ -105,112 +111,169 @@ nav .nav-links a:hover::after{width:100%}
 /* 区块标题 */
 .section-header{text-align:center;margin-bottom:56px}
 .section-header .tag{display:inline-block;padding:4px 14px;background:var(--accent-glow);border:1px solid rgba(59,130,246,.2);border-radius:100px;font-size:12px;font-weight:600;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-.section-header h2{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-1px;margin-bottom:14px}
-.section-header p{color:var(--text2);font-size:17px;max-width:520px;margin:0 auto}
+.section-header h2{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-1px;margin-bottom:12px}
+.section-header p{color:var(--text2);font-size:16px;max-width:560px;margin:0 auto}
 
 /* 特性卡片 */
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.feature-card{background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .4s;position:relative;overflow:hidden}
-.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);opacity:0;transition:opacity .4s}
+.features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.feature-card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all .4s;position:relative;overflow:hidden}
 .feature-card:hover{border-color:var(--border2);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .4s}
 .feature-card:hover::before{opacity:1}
-.feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid var(--border)}
-.feature-icon svg{width:22px;height:22px;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none}
-.feature-icon.blue{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.2)}.feature-icon.blue svg{stroke:var(--accent2)}
-.feature-icon.green{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.2)}.feature-icon.green svg{stroke:var(--green)}
-.feature-icon.orange{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.2)}.feature-icon.orange svg{stroke:var(--orange)}
-.feature-icon.purple{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.2)}.feature-icon.purple svg{stroke:var(--purple)}
-.feature-card h3{font-size:16px;margin-bottom:8px;font-weight:700}
-.feature-card p{font-size:14px;color:var(--text2);line-height:1.7}
+.feature-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:20px}
+.feature-icon.blue{background:var(--accent-glow);color:var(--accent2)}
+.feature-icon.green{background:var(--green-glow);color:var(--green)}
+.feature-icon.orange{background:rgba(245,158,11,.12);color:var(--orange)}
+.feature-icon.purple{background:rgba(168,85,247,.12);color:var(--purple)}
+.feature-icon.red{background:rgba(239,68,68,.12);color:var(--red)}
+.feature-card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.feature-card p{font-size:13px;color:var(--text2);line-height:1.6}
+.feature-card.highlight{border-color:rgba(59,130,246,.2);background:linear-gradient(135deg,rgba(59,130,246,.05),rgba(34,197,94,.03))}
+.feature-card.highlight-relay{border-color:rgba(168,85,247,.2);background:linear-gradient(135deg,rgba(168,85,247,.05),rgba(245,158,11,.03))}
 
 /* 架构图 */
-.arch-section{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.arch-diagram{max-width:800px;margin:0 auto;padding:40px;background:var(--glass);border:1px solid var(--border);border-radius:16px}
-.arch-flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;row-gap:16px}
-.arch-node{padding:16px 24px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;text-align:center;min-width:140px;position:relative}
-.arch-node .node-title{font-size:14px;font-weight:700;margin-bottom:4px}
-.arch-node .node-desc{font-size:12px;color:var(--text2)}
-.arch-node.highlight{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
-.arch-arrow{color:var(--text3);font-size:24px;padding:0 8px;flex-shrink:0}
-.arch-sep{width:100%;height:1px;background:var(--border);margin:24px 0 0}
+.arch-dual{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.arch-diagram{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:32px 28px;text-align:center}
+.arch-diagram h3{font-size:18px;font-weight:700;margin-bottom:24px}
+.arch-diagram h3 .mode-cloud{color:var(--accent2)}
+.arch-diagram h3 .mode-relay{color:var(--purple)}
+.arch-flow{display:flex;flex-direction:column;align-items:center;gap:0}
+.arch-node{padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid var(--border2);background:var(--surface2);position:relative;min-width:200px}
+.arch-node.local{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.08)}
+.arch-node.tool{border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.08)}
+.arch-node.relay-tool{border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.08)}
+.arch-node.edge{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
+.arch-node.public{border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.08)}
+.arch-arrow{color:var(--text3);font-size:18px;padding:6px 0;display:flex;align-items:center;justify-content:center}
+.arch-arrow span{font-size:11px;color:var(--text3);margin-left:8px}
 
 /* 对比表 */
-.compare-wrap{background:var(--glass);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-.compare-table{width:100%;border-collapse:collapse;font-size:14px}
-.compare-table th,.compare-table td{padding:16px 20px;text-align:left;border-bottom:1px solid var(--border)}
-.compare-table thead{background:var(--surface2)}
-.compare-table th{color:var(--text2);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
-.compare-table tbody tr{transition:background .2s}
-.compare-table tbody tr:hover{background:var(--glass2)}
+.compare-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.compare-table{width:100%;border-collapse:collapse;background:var(--glass);border:1px solid var(--border);border-radius:14px;overflow:hidden;font-size:14px}
+.compare-table th,.compare-table td{padding:14px 20px;text-align:left;border-bottom:1px solid var(--border)}
+.compare-table thead th{background:var(--surface2);font-weight:700;font-size:15px;color:var(--text)}
+.compare-table thead th:nth-child(2){color:var(--accent2)}
+.compare-table thead th:nth-child(3){color:var(--purple)}
 .compare-table tbody tr:last-child td{border-bottom:none}
-.compare-table td:first-child{color:var(--text);font-weight:500}
-.compare-table td:nth-child(2){color:var(--text3)}
-.compare-table td:nth-child(3){color:var(--green);font-weight:600}
-.check{color:var(--green)}.cross{color:var(--text3)}
+.compare-table tbody tr:hover{background:var(--glass2)}
+.compare-table td:first-child{font-weight:600;color:var(--text2)}
 
 /* 命令速查 */
-.cmd-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.cmd-item{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;background:var(--glass);border:1px solid var(--border);border-radius:12px;transition:all .3s}
+.cmd-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.cmd-tab{padding:10px 24px;font-size:14px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .3s}
+.cmd-tab:hover{color:var(--text2)}
+.cmd-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.cmd-panel{display:none}
+.cmd-panel.active{display:block}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cmd-item{display:flex;flex-direction:column;gap:4px;padding:14px 18px;background:var(--glass);border:1px solid var(--border);border-radius:10px;transition:all .3s}
 .cmd-item:hover{border-color:var(--border2);background:var(--glass2)}
-.cmd-code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;color:var(--accent2);white-space:nowrap;flex-shrink:0;padding:3px 8px;background:var(--surface2);border-radius:6px}
-.cmd-desc{font-size:13px;color:var(--text2);line-height:1.5}
+.cmd-code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;color:var(--green);word-break:break-all}
+.cmd-desc{font-size:12px;color:var(--text3)}
+
+/* 故障排查 */
+.trouble-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all .4s}
+.card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:18px;background:rgba(239,68,68,.1);color:var(--red)}
+.card h3{font-size:15px;font-weight:700;margin-bottom:8px}
+.card p{font-size:13px;color:var(--text2);line-height:1.6}
+.card code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:12px;color:var(--orange);font-family:"SF Mono",Monaco,Consolas,monospace}
 
 /* 安装 */
-.install-box{max-width:680px;margin:0 auto}
-.install-tabs{display:flex;gap:0;background:var(--surface2);border-radius:14px 14px 0 0;border:1px solid var(--border);border-bottom:none;overflow:hidden}
-.install-tab{flex:1;padding:14px;text-align:center;font-size:14px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .3s;border:none;background:none}
+.install-box{background:var(--glass);border:1px solid var(--border);border-radius:14px;overflow:hidden;max-width:700px;margin:0 auto}
+.install-tabs{display:flex;border-bottom:1px solid var(--border)}
+.install-tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .3s;border-bottom:2px solid transparent}
 .install-tab:hover{color:var(--text2)}
-.install-tab.active{color:var(--text);background:var(--surface);box-shadow:inset 0 -2px 0 var(--accent)}
-.install-panel{display:none;background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 14px 14px;padding:28px}
+.install-tab.active{color:var(--accent2);border-bottom-color:var(--accent);background:var(--glass2)}
+.install-panel{display:none;padding:24px}
 .install-panel.active{display:block}
-.install-panel pre{background:var(--surface2);padding:18px;border-radius:10px;overflow-x:auto;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;line-height:1.8;border:1px solid var(--border)}
-.install-panel .note{margin-top:14px;font-size:13px;color:var(--text3)}
+.install-panel pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.7;font-family:"SF Mono",Monaco,Consolas,monospace;color:var(--green)}
 
 /* 快速上手 */
-.qs-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-.qs-card{background:var(--glass);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .3s}
-.qs-card:hover{border-color:var(--border2);transform:translateY(-2px)}
-.qs-card-head{padding:24px 24px 0;display:flex;align-items:center;gap:12px}
-.qs-card-head .qs-num{width:32px;height:32px;border-radius:8px;background:var(--accent-glow);border:1px solid rgba(59,130,246,.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--accent2);flex-shrink:0}
-.qs-card-head .qs-info h3{font-size:15px;font-weight:700}
-.qs-card-head .qs-info small{font-size:12px;color:var(--text2)}
-.qs-card pre{margin:16px;background:var(--surface2);padding:18px;border-radius:10px;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;line-height:1.9;overflow-x:auto;border:1px solid var(--border)}
+.qs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.qs-card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all .4s}
+.qs-card:hover{border-color:var(--border2);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.qs-card .qs-step{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:700;margin-bottom:14px}
+.qs-card .qs-step.blue{background:var(--accent-glow);color:var(--accent2);border:1px solid rgba(59,130,246,.3)}
+.qs-card .qs-step.green{background:var(--green-glow);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.qs-card .qs-step.purple{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+.qs-card h3{font-size:16px;font-weight:700;margin-bottom:10px}
+.qs-card p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.qs-card pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.7;font-family:"SF Mono",Monaco,Consolas,monospace;color:var(--green);overflow-x:auto}
 
 /* 桌面客户端 */
-.desktop-card{max-width:760px;margin:0 auto;background:var(--glass);border:1px solid var(--border);border-radius:20px;padding:48px 40px;text-align:center;position:relative;overflow:hidden}
-.desktop-card::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 0%,var(--accent-glow),transparent 50%);pointer-events:none}
-.desktop-card h3{font-size:22px;font-weight:800;margin-bottom:12px;position:relative}
-.desktop-card p{max-width:480px;margin:0 auto 28px;font-size:15px;color:var(--text2);line-height:1.7;position:relative}
+.desktop-card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:40px;text-align:center;max-width:700px;margin:0 auto}
+.desktop-card h3{font-size:22px;font-weight:700;margin-bottom:10px}
+.desktop-card p{color:var(--text2);font-size:14px;margin-bottom:24px}
+.desktop-card .dl-links{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.desktop-card .dl-links a{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;font-size:13px;font-weight:600;color:var(--text);transition:all .3s}
+.desktop-card .dl-links a:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-2px)}
 
 /* Footer */
-footer{border-top:1px solid var(--border);padding:48px 0;position:relative;z-index:1}
-.footer-inner{display:flex;align-items:center;justify-content:space-between}
-.footer-links{display:flex;gap:24px}
-.footer-links a{color:var(--text3);font-size:13px;transition:color .2s}
-.footer-links a:hover{color:var(--text2)}
-.footer-copy{font-size:13px;color:var(--text3)}
+footer{border-top:1px solid var(--border);padding:40px 0;text-align:center;position:relative;z-index:1}
+footer p{font-size:13px;color:var(--text3)}
+footer a{color:var(--text2)}
+footer a:hover{color:var(--accent2)}
+footer .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:12px;font-size:13px}
 
 /* 滚动动画 */
-.reveal{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.16,1,.3,1)}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease-out,transform .7s ease-out}
 .reveal.visible{opacity:1;transform:translateY(0)}
 
 /* 响应式 */
 @media(max-width:900px){
   .features-grid{grid-template-columns:repeat(2,1fr)}
+  .arch-dual{grid-template-columns:1fr}
   .cmd-grid{grid-template-columns:1fr}
-  .arch-flow{flex-direction:column;gap:8px}
-  .arch-arrow{transform:rotate(90deg);padding:4px 0}
+  .qs-grid{grid-template-columns:1fr}
+  .trouble-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(4,1fr);gap:16px}
+  nav .nav-links a:not(.gh-star){display:none}
+  .container{padding:0 20px}
+  .terminal{max-width:100%}
+  .install-box{max-width:100%}
+  .compare-table{font-size:13px}
+  .compare-table th,.compare-table td{padding:10px 14px}
 }
 @media(max-width:768px){
-  nav .nav-links{display:none}
-  section{padding:72px 0}
-  .hero{padding:120px 0 72px}
   .features-grid{grid-template-columns:1fr}
-  .qs-grid{grid-template-columns:1fr}
-  .stats{gap:28px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  section{padding:60px 0}
+  .hero{padding:120px 0 60px}
+  .hero h1{font-size:32px;letter-spacing:-1px}
+  .hero .subtitle{font-size:15px}
+  .cta-group{flex-direction:column;gap:12px}
+  .cta-group .btn{width:100%;justify-content:center}
+  .desktop-card{padding:24px}
+  .desktop-card .dl-links{flex-direction:column;align-items:center}
+  .section-header h2{font-size:24px}
+  .section-header p{font-size:14px}
+  .terminal-body{padding:14px;font-size:13px}
+  .term-tabs{padding:0 8px}
+  .term-tab{padding:6px 12px;font-size:12px}
+  .install-tabs{flex-wrap:wrap}
+  .install-tab{font-size:12px;padding:10px 8px}
+  .cmd-tabs{flex-wrap:wrap}
+  .cmd-tab{padding:8px 16px;font-size:13px}
+  .arch-node{min-width:auto;padding:8px 14px;font-size:12px}
+  .feature-card{padding:22px 18px}
+  .qs-card pre{font-size:11px}
+  nav .container{height:52px}
+  nav .logo{font-size:18px}
+  .gh-star{padding:6px 12px;font-size:12px;gap:6px}
+  .gh-star svg{width:14px;height:14px}
+  footer .footer-links{flex-wrap:wrap;gap:16px}
+}
+@media(max-width:480px){
+  .container{padding:0 16px}
+  section{padding:48px 0}
+  .hero{padding:100px 0 48px}
+  .stats{gap:12px}
   .stat-num{font-size:22px}
-  .footer-inner{flex-direction:column;gap:16px;text-align:center}
-  .desktop-card{padding:32px 24px}
+  .stat-label{font-size:11px}
+  .compare-table th,.compare-table td{padding:8px 10px;font-size:12px}
+  .install-panel pre{font-size:11px;padding:12px;word-break:break-all}
 }
 </style>
 </head>
@@ -224,416 +287,525 @@ footer{border-top:1px solid var(--border);padding:48px 0;position:relative;z-ind
 </div>
 
 <!-- 导航 -->
-<nav id="navbar">
-<div class="container">
-  <a href="#" class="logo">cf<span>tunnel</span></a>
-  <div class="nav-links">
-    <a href="#features">特性</a>
-    <a href="#architecture">架构</a>
-    <a href="#compare">对比</a>
-    <a href="#commands">命令</a>
-    <a href="#troubleshooting">排查</a>
-    <a href="#install">安装</a>
-    <a href="#quickstart">上手</a>
-    <a href="#desktop">桌面端</a>
+<nav>
+  <div class="container">
+    <a href="#" class="logo">cf<span>tunnel</span></a>
+    <div class="nav-links">
+      <a href="#features">特性</a>
+      <a href="#arch">架构</a>
+      <a href="#compare">对比</a>
+      <a href="#commands">命令</a>
+      <a href="#trouble">排查</a>
+      <a href="#install">安装</a>
+      <a href="#quickstart">上手</a>
+      <a href="#server">服务端</a>
+      <a href="#desktop">桌面端</a>
+      <a href="https://github.com/qingchencloud/cftunnel" target="_blank" class="gh-star">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Star
+      </a>
+    </div>
   </div>
-  <a href="https://github.com/qingchencloud/cftunnel" class="gh-star" target="_blank">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-    Star on GitHub
-  </a>
-</div>
 </nav>
 
 <!-- Hero -->
 <section class="hero">
-<div class="container">
-  <div class="hero-badge">
-    <span class="dot"></span>
-    v0.6 · 开源免费 · MIT License
-  </div>
-  <h1>一条命令<br><span class="gradient">localhost → 公网域名</span></h1>
-  <p class="subtitle">基于 Cloudflare Tunnel 的极简 CLI，免费、安全、无需公网 IP，支持 macOS / Linux / Windows</p>
+  <div class="container">
+    <div class="hero-badge"><span class="dot"></span> v0.7 · 双模式穿透 · 开源免费 · MIT</div>
+    <h1><span class="gradient">全协议内网穿透工具</span></h1>
+    <p class="subtitle">Cloudflare 免费穿透 + 自建中继全协议穿透，一个工具搞定</p>
 
-  <div class="terminal">
-    <div class="terminal-bar">
-      <div class="terminal-dot r"></div>
-      <div class="terminal-dot y"></div>
-      <div class="terminal-dot g"></div>
+    <div class="cta-group">
+      <a href="#install" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        快速安装
+      </a>
+      <a href="https://github.com/qingchencloud/cftunnel" target="_blank" class="btn btn-outline">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
     </div>
-    <div class="terminal-body" id="terminal-anim">
-      <div><span class="prompt">$ </span><span class="cmd">cftunnel quick 3000</span></div>
-      <div class="out">正在下载 cloudflared...</div>
-      <div class="out">cloudflared 已下载</div>
-      <div><span class="out">✔ 隧道已启动: </span><span class="url">https://portrait-liverpool-essentials.trycloudflare.com</span></div>
+
+    <!-- 终端动画 -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+        <div class="term-tabs">
+          <div class="term-tab active" onclick="switchTermTab(0)">Cloud 模式</div>
+          <div class="term-tab" onclick="switchTermTab(1)">Relay 模式</div>
+        </div>
+        <span class="term-title">zsh</span>
+      </div>
+      <div class="terminal-body">
+        <div class="term-panel active" id="term-cloud">
+          <div><span class="prompt">$ </span><span class="cmd">cftunnel quick <span class="flag">3000</span></span></div>
+          <div><span class="output">✔ 隧道已启动: https://xxx-yyy-zzz.trycloudflare.com</span></div>
+        </div>
+        <div class="term-panel" id="term-relay">
+          <div><span class="prompt">$ </span><span class="cmd">cftunnel relay add mc <span class="flag">--local 25565 --proto tcp</span></span></div>
+          <div><span class="output">✔ 规则已添加: tcp://localhost:25565 → 远程:25565</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计数字 -->
+    <div class="stats" style="margin-top:48px">
+      <div class="stat"><div class="stat-num">6</div><div class="stat-label">平台支持</div></div>
+      <div class="stat"><div class="stat-num">1</div><div class="stat-label">条命令穿透</div></div>
+      <div class="stat"><div class="stat-num">0</div><div class="stat-label">费用</div></div>
+      <div class="stat"><div class="stat-num">全</div><div class="stat-label">协议覆盖</div></div>
     </div>
   </div>
-
-  <div class="cta-group">
-    <a href="#install" class="btn btn-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      立即安装
-    </a>
-    <a href="https://github.com/qingchencloud/cftunnel" class="btn btn-outline" target="_blank">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      GitHub
-    </a>
-    <a href="https://linux.do/t/1636467" class="btn btn-outline" target="_blank">社区讨论</a>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="stat-num">6</div><div class="stat-label">支持平台</div></div>
-    <div class="stat"><div class="stat-num">1</div><div class="stat-label">条命令穿透</div></div>
-    <div class="stat"><div class="stat-num">0</div><div class="stat-label">费用</div></div>
-    <div class="stat"><div class="stat-num">MIT</div><div class="stat-label">开源协议</div></div>
-  </div>
-</div>
 </section>
 
-<!-- 特性 -->
+<!-- 特性卡片 -->
 <section id="features">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Features</div>
-    <h2>为什么选 cftunnel</h2>
-    <p>把 Cloudflare Tunnel 的繁琐流程封装成极简 CLI</p>
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Features</span>
+      <h2>双引擎，全场景覆盖</h2>
+      <p>Cloud 模式零成本穿透 HTTP/WS，Relay 模式自建中继支持 TCP/UDP 全协议</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card highlight reveal">
+        <div class="feature-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h3>Cloud 模式</h3>
+        <p>基于 Cloudflare Tunnel，免费穿透 HTTP/HTTPS/WebSocket，自动 TLS，全球 CDN 加速</p>
+      </div>
+      <div class="feature-card highlight-relay reveal">
+        <div class="feature-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <h3>Relay 模式</h3>
+        <p>基于 frp 自建中继，支持 TCP/UDP 全协议穿透，适合游戏服务器、SSH、数据库等场景</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <h3>一条命令穿透</h3>
+        <p>cftunnel quick 3000 即刻穿透，零配置上手</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon orange">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>6 平台支持</h3>
+        <p>macOS / Linux / Windows，ARM64 + AMD64 全覆盖</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>自有域名模式</h3>
+        <p>绑定自己的域名，自动配置 DNS 和 TLS 证书</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <h3>系统服务</h3>
+        <p>一键注册 launchd / systemd / Windows Service，开机自启</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon orange">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <h3>自动安装 cloudflared</h3>
+        <p>自动检测平台下载对应二进制，无需手动安装</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <h3>自更新</h3>
+        <p>cftunnel selfupdate 一键升级到最新版本</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon red">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>实时日志</h3>
+        <p>纯 Go 实现跨平台 tail，实时查看隧道日志</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3>开源免费</h3>
+        <p>MIT 协议，代码完全开源，社区驱动</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon red">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h3>访问保护</h3>
+        <p>--auth 一键启用密码保护，内置鉴权代理中间件</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </div>
+        <h3>桌面客户端</h3>
+        <p>图形界面管理隧道，适合不熟悉命令行的用户</p>
+      </div>
+    </div>
   </div>
-  <div class="features-grid">
-    <div class="feature-card reveal">
-      <div class="feature-icon blue"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-      <h3>免域名模式</h3>
-      <p>cftunnel quick &lt;端口&gt;，零配置生成 *.trycloudflare.com 临时公网地址，无需账户和域名</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon green"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
-      <h3>极简操作</h3>
-      <p>init → create → add → up，4 条命令搞定自有域名穿透，DNS CNAME 自动创建和清理</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon purple"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-      <h3>全平台覆盖</h3>
-      <p>macOS (Intel / Apple Silicon)、Linux (amd64 / arm64)、Windows 10+ (amd64 / arm64)</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-      <h3>安全免费</h3>
-      <p>基于 Cloudflare 全球网络加密传输，无需公网 IP，完全免费使用</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon purple"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-      <h3>访问保护</h3>
-      <p>--auth user:pass 一键启用密码保护，内置鉴权代理中间件，无需外部依赖，支持 WebSocket 透传</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon blue"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-      <h3>系统服务</h3>
-      <p>cftunnel install 一键注册开机自启 — macOS launchd / Linux systemd / Windows Service</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon orange"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-      <h3>便携模式</h3>
-      <p>程序同级目录放一个 portable 空文件，配置/日志/二进制全部就地存储，U 盘携带</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon blue"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-      <h3>下载加速</h3>
-      <p>内置多镜像源轮询，自动选择最快通道，国内用户也能秒装 cloudflared</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon green"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
-      <h3>自更新</h3>
-      <p>cftunnel update 一键升级到最新版，自动检测 GitHub Release</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon orange"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
-      <h3>一键清理</h3>
-      <p>cftunnel destroy 自动删隧道 + 删 DNS 记录 + 删本地配置，不留残余</p>
-    </div>
-  </div>
-</div>
 </section>
 
-<!-- 架构原理 -->
-<section id="architecture" class="arch-section">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Architecture</div>
-    <h2>工作原理</h2>
-    <p>cftunnel 是 cloudflared 的智能管理层，不是代理本身</p>
-  </div>
-  <div class="arch-diagram reveal">
-    <div class="arch-flow">
-      <div class="arch-node">
-        <div class="node-title">localhost:3000</div>
-        <div class="node-desc">你的本地服务</div>
+<!-- 架构图 -->
+<section id="arch">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Architecture</span>
+      <h2>双模式架构</h2>
+      <p>两种穿透路径，覆盖不同场景需求</p>
+    </div>
+    <div class="arch-dual">
+      <div class="arch-diagram reveal">
+        <h3><span class="mode-cloud">Cloud 模式</span></h3>
+        <div class="arch-flow">
+          <div class="arch-node local">localhost:端口</div>
+          <div class="arch-arrow">↓ <span>本地流量</span></div>
+          <div class="arch-node tool">cftunnel</div>
+          <div class="arch-arrow">↓ <span>启动管理</span></div>
+          <div class="arch-node tool">cloudflared</div>
+          <div class="arch-arrow">↓ <span>QUIC 隧道</span></div>
+          <div class="arch-node edge">Cloudflare Edge</div>
+          <div class="arch-arrow">↓ <span>全球 CDN</span></div>
+          <div class="arch-node public">公网用户访问</div>
+        </div>
       </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node highlight">
-        <div class="node-title">cftunnel</div>
-        <div class="node-desc">CLI 管理层</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-title">cloudflared</div>
-        <div class="node-desc">Tunnel 守护进程</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node" style="border-color:var(--orange);box-shadow:0 0 20px rgba(245,158,11,.12)">
-        <div class="node-title">Cloudflare Edge</div>
-        <div class="node-desc">全球 CDN 网络</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node">
-        <div class="node-title">公网用户</div>
-        <div class="node-desc">通过域名访问</div>
+      <div class="arch-diagram reveal">
+        <h3><span class="mode-relay">Relay 模式</span></h3>
+        <div class="arch-flow">
+          <div class="arch-node local">localhost:端口</div>
+          <div class="arch-arrow">↓ <span>本地流量</span></div>
+          <div class="arch-node relay-tool">cftunnel (frpc)</div>
+          <div class="arch-arrow">↓ <span>TCP/UDP 隧道</span></div>
+          <div class="arch-node edge">你的服务器 (frps)</div>
+          <div class="arch-arrow">↓ <span>公网端口映射</span></div>
+          <div class="arch-node public">远程访问</div>
+        </div>
       </div>
     </div>
-    <div class="arch-sep"></div>
-    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text3);line-height:2">
-      cftunnel 负责：自动下载 cloudflared · 创建/管理 Tunnel · 推送 ingress 配置 · 管理 DNS 记录 · 注册系统服务<br>
-      流量路径：本地服务 ⇄ cloudflared ⇄ Cloudflare Edge ⇄ 公网用户（全程加密，cftunnel 不经手流量）
-    </div>
   </div>
-</div>
 </section>
 
 <!-- 对比表 -->
 <section id="compare">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Compare</div>
-    <h2>cftunnel vs 原生 cloudflared</h2>
-    <p>同样的 Cloudflare Tunnel，更简单的操作方式</p>
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Compare</span>
+      <h2>模式对比</h2>
+      <p>根据你的场景选择合适的穿透模式</p>
+    </div>
+    <div class="compare-wrap reveal">
+      <table class="compare-table">
+        <thead>
+          <tr><th>功能</th><th>Cloud 模式</th><th>Relay 模式</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>支持协议</td><td>HTTP / HTTPS / WebSocket</td><td>TCP / UDP / 全协议</td></tr>
+          <tr><td>需要</td><td>Cloudflare 账号（免费）</td><td>一台公网服务器</td></tr>
+          <tr><td>域名</td><td>免费随机域名 / 自有域名</td><td>服务器 IP 直连</td></tr>
+          <tr><td>加密</td><td>自动 TLS + Cloudflare CDN</td><td>frp 内置加密</td></tr>
+          <tr><td>费用</td><td>完全免费</td><td>服务器成本</td></tr>
+          <tr><td>典型场景</td><td>Web 开发、API 调试、Webhook</td><td>游戏服务器、SSH、数据库、RDP</td></tr>
+          <tr><td>启动命令</td><td><code>cftunnel quick 3000</code></td><td><code>cftunnel quick 25565 --relay</code></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div class="compare-wrap reveal">
-    <table class="compare-table">
-      <thead><tr><th>操作</th><th>原生 cloudflared</th><th>cftunnel</th></tr></thead>
-      <tbody>
-        <tr><td>免域名穿透</td><td>cloudflared tunnel --url 手动操作</td><td>cftunnel quick &lt;端口&gt;</td></tr>
-        <tr><td>创建隧道</td><td>登录浏览器 + 手动配置</td><td>cftunnel create my-tunnel</td></tr>
-        <tr><td>DNS 记录</td><td>手动去 Dashboard 创建 CNAME</td><td>自动创建和清理</td></tr>
-        <tr><td>多路由管理</td><td>手动编辑 YAML 配置</td><td>add / remove / list</td></tr>
-        <tr><td>开机自启</td><td>手动写 systemd / launchd</td><td>cftunnel install</td></tr>
-        <tr><td>清理资源</td><td>手动删隧道 + 删 DNS + 删配置</td><td>cftunnel destroy</td></tr>
-        <tr><td>自更新</td><td>无</td><td>cftunnel update</td></tr>
-        <tr><td>便携模式</td><td>无</td><td>portable 文件启用</td></tr>
-        <tr><td>密码保护</td><td>需配合 Cloudflare Access</td><td>--auth user:pass 内置鉴权</td></tr>
-        <tr><td>下载加速</td><td>仅 GitHub 原始地址</td><td>多镜像源自动轮询</td></tr>
-        <tr><td>Windows 检测</td><td>无</td><td>自动检测 Win10+ 版本</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
 </section>
 
 <!-- 命令速查 -->
-<section id="commands" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Commands</div>
-    <h2>命令速查</h2>
-    <p>所有命令一览，复制即用</p>
+<section id="commands">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Commands</span>
+      <h2>命令速查</h2>
+      <p>两种模式的常用命令一览</p>
+    </div>
+    <div class="reveal">
+      <div class="cmd-tabs">
+        <div class="cmd-tab active" onclick="switchCmdTab(0)">Cloud 模式</div>
+        <div class="cmd-tab" onclick="switchCmdTab(1)">Relay 模式</div>
+      </div>
+      <div class="cmd-panel active" id="cmd-cloud">
+        <div class="cmd-grid">
+          <div class="cmd-item"><div class="cmd-code">cftunnel init</div><div class="cmd-desc">初始化配置（API Token + Account ID）</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel quick 3000</div><div class="cmd-desc">一键穿透本地 3000 端口（免域名）</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel create mytunnel</div><div class="cmd-desc">创建命名隧道</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel add myapp 8080 --domain app.example.com</div><div class="cmd-desc">添加域名路由</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel remove myapp</div><div class="cmd-desc">删除域名路由</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel up</div><div class="cmd-desc">启动隧道</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel down</div><div class="cmd-desc">停止隧道</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel logs</div><div class="cmd-desc">查看实时日志</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel install</div><div class="cmd-desc">注册系统服务（开机自启）</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel destroy</div><div class="cmd-desc">删除隧道 + DNS + 配置</div></div>
+        </div>
+      </div>
+      <div class="cmd-panel" id="cmd-relay">
+        <div class="cmd-grid">
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay init</div><div class="cmd-desc">初始化中继配置（服务器地址 + Token）</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay add web --local 8080 --proto tcp</div><div class="cmd-desc">添加 TCP 穿透规则</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay add mc --local 25565 --proto tcp</div><div class="cmd-desc">穿透 Minecraft 服务器</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay add voice --local 9987 --proto udp</div><div class="cmd-desc">穿透 UDP 端口（如语音服务）</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay remove web</div><div class="cmd-desc">删除穿透规则</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay up</div><div class="cmd-desc">启动中继连接</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay down</div><div class="cmd-desc">停止中继连接</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay list</div><div class="cmd-desc">列出所有穿透规则</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay install</div><div class="cmd-desc">注册中继系统服务</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay server setup</div><div class="cmd-desc">SSH 远程安装 frps 服务端</div></div>
+          <div class="cmd-item"><div class="cmd-code">cftunnel relay logs</div><div class="cmd-desc">查看中继日志</div></div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="cmd-grid">
-    <div class="cmd-item reveal"><div class="cmd-code">quick &lt;端口&gt;</div><div class="cmd-desc">免域名模式，一键穿透，Ctrl+C 退出自动清理</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">quick &lt;端口&gt; --auth user:pass</div><div class="cmd-desc">免域名模式 + 密码保护，访问需登录验证</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">init</div><div class="cmd-desc">初始化配置，输入 API Token 和 Account ID</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">create &lt;名称&gt;</div><div class="cmd-desc">创建 Cloudflare Tunnel</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">add &lt;名&gt; &lt;端口&gt;</div><div class="cmd-desc">添加路由，自动创建 DNS CNAME 记录</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">add &lt;名&gt; &lt;端口&gt; --auth user:pass</div><div class="cmd-desc">添加路由 + 密码保护</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">remove &lt;名称&gt;</div><div class="cmd-desc">删除路由，同步清理 DNS 记录</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">up / down</div><div class="cmd-desc">启动 / 停止 cloudflared 守护进程</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">install</div><div class="cmd-desc">注册系统服务，开机自启</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">uninstall</div><div class="cmd-desc">卸载系统服务</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">list</div><div class="cmd-desc">查看当前所有路由配置</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">logs</div><div class="cmd-desc">查看 cloudflared 运行日志</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">destroy</div><div class="cmd-desc">一键清理：删隧道 + 删 DNS + 删配置</div></div>
-    <div class="cmd-item reveal"><div class="cmd-code">update</div><div class="cmd-desc">自更新到最新版本</div></div>
-  </div>
-</div>
 </section>
 
 <!-- 故障排查 -->
-<section id="troubleshooting">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Troubleshooting</div>
-    <h2>故障排查</h2>
-    <p>常见问题与解决方案</p>
-  </div>
-  <div class="grid-2" style="gap:20px">
-    <div class="card reveal">
-      <div class="card-icon" style="background:rgba(239,68,68,.12);color:#ef4444">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      </div>
-      <h3>QUIC 连接超时</h3>
-      <p><code>failed to dial to edge with quic: timeout</code></p>
-      <p style="color:var(--text2);margin-top:8px">代理/防火墙拦截了 UDP。cftunnel v0.6.1+ 已默认使用 HTTP/2（TCP）。运行 <code>cftunnel uninstall && cftunnel install</code> 重装服务即可。</p>
+<section id="trouble">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Troubleshoot</span>
+      <h2>常见问题排查</h2>
+      <p>遇到问题？这里有最常见的解决方案</p>
     </div>
-    <div class="card reveal">
-      <div class="card-icon" style="background:rgba(245,158,11,.12);color:#f59e0b">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <div class="trouble-grid">
+      <div class="card reveal">
+        <div class="card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3>QUIC 连接超时</h3>
+        <p>部分网络环境屏蔽 UDP/443。解决：设置 <code>--protocol http2</code> 回退到 HTTP/2，或检查防火墙规则。</p>
       </div>
-      <h3>DNS fake-ip 劫持</h3>
-      <p>cloudflared 解析到 <code>198.18.0.x</code></p>
-      <p style="color:var(--text2);margin-top:8px">Clash 等代理的 TUN 模式劫持了 DNS。将 <code>cloudflared</code> 进程加入 TUN 绕行列表，或将 <code>*.argotunnel.com</code> 加入 fake-ip-filter。</p>
-    </div>
-    <div class="card reveal">
-      <div class="card-icon" style="background:rgba(168,85,247,.12);color:#a855f7">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <div class="card reveal">
+        <div class="card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3>fake-ip 冲突</h3>
+        <p>Clash 等代理工具的 fake-ip 模式可能劫持 Cloudflare 域名解析。解决：将 <code>trycloudflare.com</code> 加入直连规则。</p>
       </div>
-      <h3>1033 错误</h3>
-      <p>DNS CNAME 指向旧 Tunnel ID</p>
-      <p style="color:var(--text2);margin-top:8px">运行 <code>cftunnel remove &lt;名称&gt;</code> 再 <code>cftunnel add</code> 重建路由，自动修正 DNS 记录。</p>
-    </div>
-    <div class="card reveal">
-      <div class="card-icon" style="background:rgba(59,130,246,.12);color:#3b82f6">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 2 13 11 9 7"/></svg>
+      <div class="card reveal">
+        <div class="card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3>错误 1033</h3>
+        <p>Cloudflare Argo Tunnel 错误，通常是隧道配置不匹配。解决：<code>cftunnel down</code> 后重新 <code>cftunnel up</code>，或删除重建隧道。</p>
       </div>
-      <h3>530 错误</h3>
-      <p>cloudflared 未连接到 Edge</p>
-      <p style="color:var(--text2);margin-top:8px">运行 <code>cftunnel logs -f</code> 查看实时日志，根据具体错误参考上述对应方案排查。</p>
+      <div class="card reveal">
+        <div class="card-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h3>错误 530</h3>
+        <p>DNS 解析指向了错误的隧道。解决：检查 DNS CNAME 记录是否指向正确的 tunnel UUID，使用 <code>cftunnel remove</code> 清理后重新添加。</p>
+      </div>
     </div>
   </div>
-</div>
 </section>
 
 <!-- 安装 -->
 <section id="install">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Install</div>
-    <h2>安装</h2>
-    <p>单二进制文件，零运行时依赖</p>
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Install</span>
+      <h2>快速安装</h2>
+      <p>选择你的平台，一行命令搞定</p>
+    </div>
+    <div class="install-box reveal">
+      <div class="install-tabs">
+        <div class="install-tab active" onclick="switchInstallTab(0)">macOS / Linux</div>
+        <div class="install-tab" onclick="switchInstallTab(1)">Windows</div>
+        <div class="install-tab" onclick="switchInstallTab(2)">源码编译</div>
+      </div>
+      <div class="install-panel active" id="install-0">
+        <pre># 自动尝试国内镜像源加速，无需手动配置
+curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.sh | bash
+
+# 国内网络慢？也可以手动使用镜像源下载:
+# curl -fsSL https://ghfast.top/https://github.com/qingchencloud/cftunnel/releases/latest/download/cftunnel_linux_amd64.tar.gz -o cftunnel.tar.gz
+# tar xzf cftunnel.tar.gz && sudo install -m 755 cftunnel /usr/local/bin/</pre>
+      </div>
+      <div class="install-panel" id="install-1">
+        <pre>irm https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.ps1 | iex</pre>
+      </div>
+      <div class="install-panel" id="install-2">
+        <pre>git clone https://github.com/qingchencloud/cftunnel.git
+cd cftunnel
+go build -o cftunnel .</pre>
+      </div>
+    </div>
   </div>
-  <div class="install-box reveal">
-    <div class="install-tabs">
-      <button class="install-tab active" onclick="switchTab(0)">macOS / Linux</button>
-      <button class="install-tab" onclick="switchTab(1)">Windows</button>
-      <button class="install-tab" onclick="switchTab(2)">源码构建</button>
-    </div>
-    <div class="install-panel active">
-      <pre><span style="color:var(--green)">$</span> curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.sh | bash</pre>
-      <p class="note">支持 macOS Intel / Apple Silicon、Linux amd64 / arm64</p>
-    </div>
-    <div class="install-panel">
-      <pre><span style="color:var(--green)">PS&gt;</span> irm https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install.ps1 | iex</pre>
-      <p class="note">支持 Windows 10+ (amd64 / arm64)，自动添加到 PATH</p>
-    </div>
-    <div class="install-panel">
-      <pre><span style="color:var(--green)">$</span> git clone https://github.com/qingchencloud/cftunnel.git
-<span style="color:var(--green)">$</span> cd cftunnel
-<span style="color:var(--green)">$</span> make build</pre>
-      <p class="note">需要 Go 1.21+</p>
-    </div>
-    <p style="text-align:center;margin-top:20px;font-size:14px">
-      也可以从 <a href="https://github.com/qingchencloud/cftunnel/releases">GitHub Releases</a> 手动下载
-    </p>
-  </div>
-</div>
 </section>
 
 <!-- 快速上手 -->
-<section id="quickstart" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Quickstart</div>
-    <h2>快速上手</h2>
-    <p>两种模式，按需选择</p>
-  </div>
-  <div class="qs-grid">
-    <div class="qs-card reveal">
-      <div class="qs-card-head">
-        <div class="qs-num">1</div>
-        <div class="qs-info">
-          <h3>免域名模式</h3>
-          <small>零配置，临时分享和调试</small>
-        </div>
-      </div>
-      <pre><span style="color:var(--green)">$</span> cftunnel quick 3000
-
-<span style="color:var(--text2)">✔ 隧道已启动:</span>
-<span style="color:var(--accent2)">https://xxx-yyy-zzz.trycloudflare.com</span>
-
-<span style="color:var(--text3)"># Ctrl+C 退出，域名自动失效</span></pre>
+<section id="quickstart">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Quick Start</span>
+      <h2>三种模式，按需选择</h2>
+      <p>从零开始，3 分钟完成内网穿透</p>
     </div>
-    <div class="qs-card reveal">
-      <div class="qs-card-head">
-        <div class="qs-num">2</div>
-        <div class="qs-info">
-          <h3>自有域名模式</h3>
-          <small>固定域名，稳定持久</small>
-        </div>
+    <div class="qs-grid">
+      <div class="qs-card reveal">
+        <div class="qs-step blue">1</div>
+        <h3>免域名模式</h3>
+        <p>无需 Cloudflare 账号，获得随机域名，适合临时分享和调试</p>
+        <pre>cftunnel quick 3000</pre>
       </div>
-      <pre><span style="color:var(--green)">$</span> cftunnel init
-<span style="color:var(--green)">$</span> cftunnel create my-tunnel
-<span style="color:var(--green)">$</span> cftunnel add app 3000 --domain app.example.com
-<span style="color:var(--green)">$</span> cftunnel up
-
-<span style="color:var(--text3)"># app.example.com → localhost:3000</span></pre>
+      <div class="qs-card reveal">
+        <div class="qs-step green">2</div>
+        <h3>自有域名模式</h3>
+        <p>绑定自己的域名，需要 Cloudflare 账号和 API Token</p>
+        <pre>cftunnel init
+cftunnel create mytunnel
+cftunnel add myapp 8080 --domain app.example.com
+cftunnel up</pre>
+      </div>
+      <div class="qs-card reveal">
+        <div class="qs-step purple">3</div>
+        <h3>中继模式</h3>
+        <p>自建中继服务器，支持 TCP/UDP 全协议穿透</p>
+        <pre>cftunnel relay init
+cftunnel relay add mc --local 25565 --proto tcp
+cftunnel relay up</pre>
+      </div>
     </div>
   </div>
-</div>
+</section>
+
+<!-- 中继服务端部署 -->
+<section id="server">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Server</span>
+      <h2>中继服务端部署</h2>
+      <p>在你的公网服务器上部署 frps，作为中继节点</p>
+    </div>
+    <div class="install-box reveal">
+      <div class="install-tabs">
+        <div class="install-tab active" onclick="switchServerTab(0)">SSH 远程安装</div>
+        <div class="install-tab" onclick="switchServerTab(1)">一键脚本</div>
+        <div class="install-tab" onclick="switchServerTab(2)">Docker Compose</div>
+      </div>
+      <div class="install-panel active" id="server-0">
+        <pre># 在本地一条命令搞定服务端安装 + 客户端配置
+cftunnel relay server setup --host 你的服务器IP --user root
+
+# 支持密钥认证
+cftunnel relay server setup --host 1.2.3.4 --key ~/.ssh/id_ed25519
+
+# 支持密码认证（交互输入，不落历史记录）
+cftunnel relay server setup --host 1.2.3.4 --password
+
+# 全交互模式
+cftunnel relay server setup</pre>
+      </div>
+      <div class="install-panel" id="server-1">
+        <pre>curl -fsSL https://raw.githubusercontent.com/qingchencloud/cftunnel/main/install-relay.sh | bash</pre>
+      </div>
+      <div class="install-panel" id="server-2">
+        <pre># 1. 下载配置文件
+mkdir -p cftunnel-relay && cd cftunnel-relay
+curl -fsSLO https://raw.githubusercontent.com/qingchencloud/cftunnel/main/docker/relay-server/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/qingchencloud/cftunnel/main/docker/relay-server/frps.toml.example
+cp frps.toml.example frps.toml
+
+# 2. 编辑 frps.toml，设置你的 auth.token
+# bindPort = 7000
+# auth.token = "你的密钥"
+
+# 3. 启动
+docker compose up -d</pre>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- 桌面客户端 -->
 <section id="desktop">
-<div class="container">
-  <div class="section-header reveal">
-    <div class="tag">Desktop</div>
-    <h2>桌面客户端</h2>
-    <p>不想敲命令？试试可视化管理界面</p>
-  </div>
-  <div class="desktop-card reveal">
-    <h3>cftunnel Desktop</h3>
-    <p>基于 Wails 构建的跨平台 GUI，仪表盘一键启停、免域名模式、路由管理、内置终端，支持 macOS / Windows / Linux</p>
-    <div class="cta-group">
-      <a href="https://github.com/qingchencloud/cftunnel-app/releases" class="btn btn-primary" target="_blank">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        下载桌面端
-      </a>
-      <a href="https://github.com/qingchencloud/cftunnel-app" class="btn btn-outline" target="_blank">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        查看源码
-      </a>
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Desktop</span>
+      <h2>桌面客户端</h2>
+      <p>图形界面管理隧道，更直观的操作体验</p>
+    </div>
+    <div class="desktop-card reveal">
+      <h3>cftunnel Desktop</h3>
+      <p>基于 Tauri 构建，轻量原生，支持 Cloud 模式和 Relay 模式的可视化管理</p>
+      <div class="dl-links">
+        <a href="https://github.com/qingchencloud/cftunnel-app/releases/latest" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          macOS
+        </a>
+        <a href="https://github.com/qingchencloud/cftunnel-app/releases/latest" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Windows
+        </a>
+        <a href="https://github.com/qingchencloud/cftunnel-app/releases/latest" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Linux
+        </a>
+      </div>
     </div>
   </div>
-</div>
 </section>
 
 <!-- Footer -->
 <footer>
-<div class="container">
-  <div class="footer-inner">
+  <div class="container">
     <div class="footer-links">
       <a href="https://github.com/qingchencloud/cftunnel" target="_blank">GitHub</a>
+      <a href="https://github.com/qingchencloud/cftunnel/issues" target="_blank">Issues</a>
       <a href="https://github.com/qingchencloud/cftunnel/releases" target="_blank">Releases</a>
-      <a href="https://linux.do/t/1636467" target="_blank">社区讨论</a>
-      <a href="https://github.com/qingchencloud/cftunnel/issues" target="_blank">反馈</a>
       <a href="https://github.com/qingchencloud/cftunnel-app" target="_blank">桌面客户端</a>
     </div>
-    <div class="footer-copy">MIT License · <a href="https://qingchencloud.com" style="color:var(--text3)">武汉晴辰天下网络科技有限公司</a></div>
+    <p>MIT License &copy; 2024-2025 <a href="https://qingchencloud.com" target="_blank">武汉晴辰天下网络科技有限公司</a></p>
   </div>
-</div>
 </footer>
 
+<!-- JavaScript -->
 <script>
 // 导航滚动效果
-const nav = document.getElementById('navbar');
-window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 40);
+window.addEventListener('scroll',function(){
+  document.querySelector('nav').classList.toggle('scrolled',window.scrollY>50);
 });
 
-// 安装 Tab 切换
-function switchTab(i) {
-  document.querySelectorAll('.install-tab').forEach((t, j) => t.classList.toggle('active', j === i));
-  document.querySelectorAll('.install-panel').forEach((p, j) => p.classList.toggle('active', j === i));
+// 终端 Tab 切换
+function switchTermTab(idx){
+  document.querySelectorAll('.term-tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
+  document.querySelectorAll('.term-panel').forEach(function(p,i){p.classList.toggle('active',i===idx)});
 }
 
-// 滚动显示动画
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+// 命令速查 Tab 切换
+function switchCmdTab(idx){
+  document.querySelectorAll('.cmd-tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
+  document.querySelectorAll('.cmd-panel').forEach(function(p,i){p.classList.toggle('active',i===idx)});
+}
+
+// 安装 Tab 切换
+function switchInstallTab(idx){
+  document.querySelectorAll('#install .install-tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
+  document.querySelectorAll('[id^="install-"]').forEach(function(p,i){p.classList.toggle('active',i===idx)});
+}
+
+// 服务端 Tab 切换
+function switchServerTab(idx){
+  document.querySelectorAll('#server .install-tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
+  document.querySelectorAll('[id^="server-"]').forEach(function(p,i){p.classList.toggle('active',i===idx)});
+}
+
+// 滚动动画
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible')}});
+},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(function(el){observer.observe(el)});
 </script>
 </body>
 </html>

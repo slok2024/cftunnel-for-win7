@@ -13,6 +13,7 @@ type Config struct {
 	Auth        AuthConfig        `yaml:"auth"`
 	Tunnel      TunnelConfig      `yaml:"tunnel"`
 	Routes      []RouteConfig     `yaml:"routes"`
+	Relay       RelayConfig       `yaml:"relay,omitempty"`
 	Cloudflared CloudflaredConfig `yaml:"cloudflared"`
 	SelfUpdate  SelfUpdateConfig  `yaml:"self_update"`
 }
@@ -51,6 +52,23 @@ func (a *AuthProxy) CookieTTLOrDefault() int {
 		return a.CookieTTL
 	}
 	return 86400
+}
+
+// RelayConfig 中继模式配置
+type RelayConfig struct {
+	Server string      `yaml:"server,omitempty"`
+	Token  string      `yaml:"token,omitempty"`
+	Rules  []RelayRule `yaml:"rules,omitempty"`
+}
+
+// RelayRule 中继穿透规则
+type RelayRule struct {
+	Name       string `yaml:"name"`
+	Proto      string `yaml:"proto"`                   // tcp/udp/http/https/stcp
+	LocalIP    string `yaml:"local_ip,omitempty"`       // 默认 127.0.0.1
+	LocalPort  int    `yaml:"local_port"`
+	RemotePort int    `yaml:"remote_port,omitempty"`    // HTTP 模式可选
+	Domain     string `yaml:"domain,omitempty"`         // HTTP 模式用
 }
 
 type CloudflaredConfig struct {
@@ -138,6 +156,27 @@ func (c *Config) RemoveRoute(name string) bool {
 	for i, r := range c.Routes {
 		if r.Name == name {
 			c.Routes = append(c.Routes[:i], c.Routes[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// FindRelayRule 查找中继规则
+func (c *Config) FindRelayRule(name string) *RelayRule {
+	for i := range c.Relay.Rules {
+		if c.Relay.Rules[i].Name == name {
+			return &c.Relay.Rules[i]
+		}
+	}
+	return nil
+}
+
+// RemoveRelayRule 删除中继规则
+func (c *Config) RemoveRelayRule(name string) bool {
+	for i, r := range c.Relay.Rules {
+		if r.Name == name {
+			c.Relay.Rules = append(c.Relay.Rules[:i], c.Relay.Rules[i+1:]...)
 			return true
 		}
 	}

@@ -5,13 +5,20 @@ import (
 	"strings"
 
 	"github.com/qingchencloud/cftunnel/internal/daemon"
+	"github.com/qingchencloud/cftunnel/internal/relay"
 	"github.com/spf13/cobra"
 )
 
-var quickAuth string
+var (
+	quickAuth  string
+	quickRelay bool
+	quickProto string
+)
 
 func init() {
 	quickCmd.Flags().StringVar(&quickAuth, "auth", "", "启用密码保护 (格式: 用户名:密码)")
+	quickCmd.Flags().BoolVar(&quickRelay, "relay", false, "使用中继模式穿透（需先 relay init）")
+	quickCmd.Flags().StringVar(&quickProto, "proto", "tcp", "中继协议 (tcp/udp)，仅 --relay 时有效")
 	rootCmd.AddCommand(quickCmd)
 }
 
@@ -21,6 +28,9 @@ var quickCmd = &cobra.Command{
 	Long:  "无需 Cloudflare 账户、API Token 或域名，一条命令生成临时公网地址。\n适合临时分享、快速调试，Ctrl+C 退出后域名自动失效。",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if quickRelay {
+			return relay.StartQuick(args[0], quickProto)
+		}
 		if quickAuth != "" {
 			user, pass, err := parseAuth(quickAuth)
 			if err != nil {
