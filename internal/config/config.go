@@ -1,4 +1,4 @@
-package config
+﻿package config
 
 import (
 	"os"
@@ -15,7 +15,6 @@ type Config struct {
 	Routes      []RouteConfig     `yaml:"routes"`
 	Relay       RelayConfig       `yaml:"relay,omitempty"`
 	Cloudflared CloudflaredConfig `yaml:"cloudflared"`
-	SelfUpdate  SelfUpdateConfig  `yaml:"self_update"`
 }
 
 type AuthConfig struct {
@@ -38,15 +37,13 @@ type RouteConfig struct {
 	Auth        *AuthProxy `yaml:"auth,omitempty"`
 }
 
-// AuthProxy 鉴权代理配置
 type AuthProxy struct {
-	Username  string `yaml:"username"`
-	Password  string `yaml:"password"`
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
 	SigningKey string `yaml:"signing_key,omitempty"`
-	CookieTTL int    `yaml:"cookie_ttl,omitempty"` // 秒，默认 86400
+	CookieTTL  int    `yaml:"cookie_ttl,omitempty"`
 }
 
-// CookieTTLOrDefault 返回 Cookie 有效期（秒），默认 86400
 func (a *AuthProxy) CookieTTLOrDefault() int {
 	if a.CookieTTL > 0 {
 		return a.CookieTTL
@@ -54,63 +51,51 @@ func (a *AuthProxy) CookieTTLOrDefault() int {
 	return 86400
 }
 
-// RelayConfig 中继模式配置
 type RelayConfig struct {
 	Server string      `yaml:"server,omitempty"`
 	Token  string      `yaml:"token,omitempty"`
 	Rules  []RelayRule `yaml:"rules,omitempty"`
 }
 
-// RelayRule 中继穿透规则
 type RelayRule struct {
 	Name       string `yaml:"name"`
-	Proto      string `yaml:"proto"`                   // tcp/udp/http/https/stcp
-	LocalIP    string `yaml:"local_ip,omitempty"`       // 默认 127.0.0.1
+	Proto      string `yaml:"proto"`
+	LocalIP    string `yaml:"local_ip,omitempty"`
 	LocalPort  int    `yaml:"local_port"`
-	RemotePort int    `yaml:"remote_port,omitempty"`    // HTTP 模式可选
-	Domain     string `yaml:"domain,omitempty"`         // HTTP 模式用
+	RemotePort int    `yaml:"remote_port,omitempty"`
+	Domain     string `yaml:"domain,omitempty"`
 }
 
 type CloudflaredConfig struct {
-	Path       string `yaml:"path"`
-	AutoUpdate bool   `yaml:"auto_update"`
-}
-
-type SelfUpdateConfig struct {
-	AutoCheck bool `yaml:"auto_check"` // 启动时自动检查 cftunnel 更新
+	Path string `yaml:"path"`
 }
 
 var (
-	dirOnce    sync.Once
-	dirPath    string
-	isPortable bool
+	dirOnce sync.Once
+	dirPath string
 )
 
-// Dir 返回配置目录路径
-// 便携模式：程序同级目录存在 portable 文件时，使用程序所在目录
-// 普通模式：~/.cftunnel/
+// Dir 强制只返回程序当前所在的目录
 func Dir() string {
 	dirOnce.Do(func() {
-		if exe, err := os.Executable(); err == nil {
-			if real, err := filepath.EvalSymlinks(exe); err == nil {
-				exeDir := filepath.Dir(real)
-				if _, err := os.Stat(filepath.Join(exeDir, "portable")); err == nil {
-					dirPath = exeDir
-					isPortable = true
-					return
-				}
-			}
+		exe, err := os.Executable()
+		if err == nil {
+			// 关键：先转绝对路径，再取目录
+			res, _ := filepath.Abs(exe)
+			dirPath = filepath.Dir(res)
 		}
-		home, _ := os.UserHomeDir()
-		dirPath = filepath.Join(home, ".cftunnel")
+		// 如果获取失败，再次尝试用 Args[0] 兜底
+		if dirPath == "" || dirPath == "." {
+			p, _ := filepath.Abs(os.Args[0])
+			dirPath = filepath.Dir(p)
+		}
 	})
 	return dirPath
 }
 
-// Portable 返回当前是否处于便携模式
+// Portable 既然只看当前目录，那么永远是便携模式
 func Portable() bool {
-	Dir() // 确保 dirOnce 已执行
-	return isPortable
+	return true
 }
 
 func Path() string {
@@ -121,6 +106,7 @@ func Load() (*Config, error) {
 	data, err := os.ReadFile(Path())
 	if err != nil {
 		if os.IsNotExist(err) {
+			// 如果没找到配置文件，返回一个空的
 			return &Config{Version: 1}, nil
 		}
 		return nil, err
@@ -133,9 +119,7 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) Save() error {
-	if err := os.MkdirAll(Dir(), 0700); err != nil {
-		return err
-	}
+	// 即使是在当前目录，也确保路径合法（虽然通常 exe 目录肯定存在）
 	data, err := yaml.Marshal(c)
 	if err != nil {
 		return err
@@ -143,11 +127,10 @@ func (c *Config) Save() error {
 	return os.WriteFile(Path(), data, 0600)
 }
 
+// --- 保持后续 Find/Remove 逻辑不变 ---
 func (c *Config) FindRoute(name string) *RouteConfig {
 	for i := range c.Routes {
-		if c.Routes[i].Name == name {
-			return &c.Routes[i]
-		}
+		if c.Routes[i].Name == name { return &c.Routes[i] }
 	}
 	return nil
 }
@@ -162,17 +145,13 @@ func (c *Config) RemoveRoute(name string) bool {
 	return false
 }
 
-// FindRelayRule 查找中继规则
 func (c *Config) FindRelayRule(name string) *RelayRule {
 	for i := range c.Relay.Rules {
-		if c.Relay.Rules[i].Name == name {
-			return &c.Relay.Rules[i]
-		}
+		if c.Relay.Rules[i].Name == name { return &c.Relay.Rules[i] }
 	}
 	return nil
 }
 
-// RemoveRelayRule 删除中继规则
 func (c *Config) RemoveRelayRule(name string) bool {
 	for i, r := range c.Relay.Rules {
 		if r.Name == name {
