@@ -1,9 +1,7 @@
-package cmd
+﻿package cmd
 
 import (
 	"fmt"
-
-	"github.com/qingchencloud/cftunnel/internal/selfupdate"
 	"github.com/spf13/cobra"
 )
 
@@ -13,23 +11,12 @@ func init() {
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "更新 cftunnel 到最新版本",
+	Short: "更新 cftunnel (当前版本已禁用自动更新)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("正在检查更新...")
-		latest, err := selfupdate.LatestVersion()
-		if err != nil {
-			return fmt.Errorf("检查更新失败: %w", err)
-		}
-		if latest == "v"+Version || latest == Version {
-			fmt.Println("已是最新版本")
-			return nil
-		}
-		fmt.Printf("发现新版本: %s → %s\n", Version, latest)
-		fmt.Println("正在下载...")
-		if err := selfupdate.Update(latest); err != nil {
-			return fmt.Errorf("更新失败: %w", err)
-		}
-		fmt.Printf("已更新到 %s\n", latest)
+		// 直接拦截，不再调用 internal/selfupdate
+		fmt.Printf("当前版本: %s (本地绿色定制版)\n", Version)
+		fmt.Println("提示: 为了系统安全与稳定性，已禁用在线自动更新功能。")
+		fmt.Println("如需更新，请联系管理员获取最新的安装包并手动替换 cftunnel.exe。")
 		return nil
 	},
 }
