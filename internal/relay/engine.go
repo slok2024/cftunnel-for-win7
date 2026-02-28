@@ -1,4 +1,4 @@
-package relay
+﻿package relay
 
 import (
 	"fmt"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
+	"syscall" // 必须包含，用于 Windows 窗口控制
 
 	"github.com/qingchencloud/cftunnel/internal/config"
 )
@@ -17,23 +19,9 @@ func pidFilePath() string {
 	return filepath.Join(config.Dir(), "frpc.pid")
 }
 
-// LogFilePath 返回中继模式日志路径
+// LogFilePath 强制返回程序同级目录下的日志路径
 func LogFilePath() string {
-	if config.Portable() {
-		return filepath.Join(config.Dir(), "cftunnel-relay.log")
-	}
-	home, _ := os.UserHomeDir()
-	switch runtime.GOOS {
-	case "darwin":
-		return filepath.Join(home, "Library/Logs/cftunnel-relay.log")
-	case "windows":
-		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-			return filepath.Join(dir, "cftunnel", "cftunnel-relay.log")
-		}
-		return filepath.Join(home, ".cftunnel", "cftunnel-relay.log")
-	default:
-		return filepath.Join(home, ".local/share/cftunnel/cftunnel-relay.log")
-	}
+	return filepath.Join(config.Dir(), "cftunnel-relay.log")
 }
 
 // Start 启动 frpc（后台模式）
@@ -63,12 +51,20 @@ func Start() error {
 	}
 
 	cmd := exec.Command(binPath, "-c", FrpcConfigPath())
+	
+	// --- Windows 隐藏窗口关键逻辑 ---
+	hideWindow(cmd) 
+	
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
+	
 	if err := cmd.Start(); err != nil {
 		logFile.Close()
 		return fmt.Errorf("启动 frpc 失败: %w", err)
 	}
+	
+	logFile.Close() 
+
 	os.WriteFile(pidFilePath(), []byte(strconv.Itoa(cmd.Process.Pid)), 0600)
 	fmt.Printf("frpc 已启动 (PID: %d)\n", cmd.Process.Pid)
 	return nil
@@ -88,35 +84,7 @@ func Stop() error {
 	return nil
 }
 
-// Running 检查 frpc 是否在运行
-func Running() bool {
-	pid, err := readPID()
-	if err != nil {
-		return false
-	}
-	return processRunning(pid)
-}
-
-// PID 返回当前运行的 PID
-func PID() int {
-	pid, _ := readPID()
-	return pid
-}
-
-func readPID() (int, error) {
-	data, err := os.ReadFile(pidFilePath())
-	if err != nil {
-		return 0, err
-	}
-	s := string(data)
-	// 去除空白
-	for len(s) > 0 && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r' || s[len(s)-1] == ' ') {
-		s = s[:len(s)-1]
-	}
-	return strconv.Atoi(s)
-}
-
-// StartQuick 前台运行 frpc（quick --relay 模式，Ctrl+C 退出）
+// StartQuick 前台模式
 func StartQuick(port, proto string) error {
 	binPath, err := EnsureFrpc()
 	if err != nil {
@@ -128,10 +96,9 @@ func StartQuick(port, proto string) error {
 		return fmt.Errorf("加载配置失败: %w", err)
 	}
 	if cfg.Relay.Server == "" {
-		return fmt.Errorf("未配置中继服务器，请先执行 cftunnel relay init")
+		return fmt.Errorf("未配置中继服务器")
 	}
 
-	// 创建临时规则
 	portNum, err := strconv.Atoi(port)
 	if err != nil {
 		return fmt.Errorf("端口格式错误: %w", err)
@@ -153,16 +120,18 @@ func StartQuick(port, proto string) error {
 	fmt.Printf("中继穿透: %s://localhost:%s → 远程端口 %s (%s)\n", proto, port, port, cfg.Relay.Server)
 
 	cmd := exec.Command(binPath, "-c", FrpcConfigPath())
+	
+	// Quick 模式如果是从 UI 调用，也建议隐藏
+	hideWindow(cmd)
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("启动 frpc 失败: %w", err)
 	}
 
-	// Ctrl+C 优雅退出
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
-
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
@@ -176,4 +145,38 @@ func StartQuick(port, proto string) error {
 		}
 	}
 	return nil
+}
+
+// --- 基础支撑函数 (修复 Undefined 错误) ---
+
+func Running() bool {
+	pid, err := readPID()
+	if err != nil {
+		return false
+	}
+	return processRunning(pid)
+}
+
+func PID() int {
+	pid, _ := readPID()
+	return pid
+}
+
+func readPID() (int, error) {
+	data, err := os.ReadFile(pidFilePath())
+	if err != nil {
+		return 0, err
+	}
+	s := strings.TrimSpace(string(data))
+	return strconv.Atoi(s)
+}
+
+func hideWindow(cmd *exec.Cmd) {
+	if runtime.GOOS == "windows" {
+		if cmd.SysProcAttr == nil {
+			cmd.SysProcAttr = &syscall.SysProcAttr{}
+		}
+		cmd.SysProcAttr.HideWindow = true
+		cmd.SysProcAttr.CreationFlags = 0x08000000 // CREATE_NO_WINDOW
+	}
 }

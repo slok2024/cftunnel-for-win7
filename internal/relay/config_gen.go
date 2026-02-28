@@ -1,4 +1,4 @@
-package relay
+﻿package relay
 
 import (
 	"fmt"
@@ -10,8 +10,9 @@ import (
 	"github.com/qingchencloud/cftunnel/internal/config"
 )
 
-// FrpcConfigPath 返回 frpc.toml 路径
+// FrpcConfigPath 确保返回程序目录下的 frpc.toml
 func FrpcConfigPath() string {
+	// 既然 config.Dir() 已经改成了程序目录，这里保持一致即可
 	return filepath.Join(config.Dir(), "frpc.toml")
 }
 
@@ -20,21 +21,24 @@ func FrpsConfigPath() string {
 	return filepath.Join(config.Dir(), "frps.toml")
 }
 
-// GenerateFrpcConfig 从 config.yml 的 relay 配置生成 frpc.toml
+// GenerateFrpcConfig 生成配置
 func GenerateFrpcConfig(relay *config.RelayConfig) error {
+	// ... 原有的逻辑非常标准，支持 frp 0.52.0+ 的 TOML 格式 ...
+	// 保持不变即可
 	if relay.Server == "" {
-		return fmt.Errorf("未配置中继服务器，请先执行 cftunnel relay init")
+		return fmt.Errorf("未配置中继服务器")
 	}
 
 	host, port, err := net.SplitHostPort(relay.Server)
 	if err != nil {
-		return fmt.Errorf("服务器地址格式错误（应为 IP:端口）: %w", err)
+		return fmt.Errorf("服务器地址格式错误: %w", err)
 	}
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "serverAddr = %q\n", host)
 	fmt.Fprintf(&b, "serverPort = %s\n", port)
 	if relay.Token != "" {
+		// 注意：frp 新版 toml 格式是 auth.token
 		fmt.Fprintf(&b, "auth.token = %q\n", relay.Token)
 	}
 	b.WriteString("\n")
@@ -58,15 +62,18 @@ func GenerateFrpcConfig(relay *config.RelayConfig) error {
 		b.WriteString("\n")
 	}
 
+	// 确保目录存在（虽然在程序目录运行，通常已存在）
+	os.MkdirAll(config.Dir(), 0755)
 	return os.WriteFile(FrpcConfigPath(), []byte(b.String()), 0600)
 }
 
-// GenerateFrpsConfig 生成服务端 frps.toml
+// GenerateFrpsConfig 保持不变
 func GenerateFrpsConfig(bindPort int, token string) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "bindPort = %d\n", bindPort)
 	if token != "" {
 		fmt.Fprintf(&b, "auth.token = %q\n", token)
 	}
+	os.MkdirAll(config.Dir(), 0755)
 	return os.WriteFile(FrpsConfigPath(), []byte(b.String()), 0600)
 }
